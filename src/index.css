@@ -1,0 +1,386 @@
+@import "tailwindcss";
+@import "../node_modules/@paystack/pax/dist/theme.css";
+
+/* Tell Tailwind v4 to scan Pax's built JS for class names.
+   Without this, Tailwind only scans src/ and skips node_modules,
+   so z-50/z-10/etc used inside Pax components never get CSS rules generated.
+   This caused all Pax dropdowns/overlays to render behind page content. */
+@source "../node_modules/@paystack/pax/dist";
+
+/* Base resets */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* ─────────────────────────────────────────────────────────────
+   PRIMITIVE PALETTE
+   Source: rebrand - new
+───────────────────────────────────────────────────────────── */
+:root {
+  /* midnight */
+  --midnight-100:  #FFFFFF;
+  --midnight-200:  #F6F7FA;
+  --midnight-300:  #ECEEF3;
+  --midnight-400:  #D7DADF;
+  --midnight-500:  #C7CBD1;
+  --midnight-600:  #8E959C;
+  --midnight-700:  #646A71;
+  --midnight-800:  #4A5056;
+  --midnight-900:  #343A40;
+  --midnight-1000: #242B31;
+  --midnight-1100: #0E141B;
+
+  /* golden yellow */
+  --golden-yellow-100:  #FFF8E8;
+  --golden-yellow-200:  #FFF3D3;
+  --golden-yellow-300:  #FFE7A4;
+  --golden-yellow-400:  #FFE08B;
+  --golden-yellow-500:  #FFD459;
+  --golden-yellow-600:  #FFC522;
+  --golden-yellow-700:  #A66D00;
+  --golden-yellow-800:  #704700;
+  --golden-yellow-900:  #4A2F00;
+  --golden-yellow-1000: #2A1A00;
+
+  /* burnt orange */
+  --burnt-orange-100:  #FDF1EA;
+  --burnt-orange-200:  #FBDDCF;
+  --burnt-orange-300:  #F8C9B3;
+  --burnt-orange-400:  #F39E79;
+  --burnt-orange-500:  #EE7A4B;
+  --burnt-orange-600:  #E8571F;
+  --burnt-orange-700:  #B8411A;
+  --burnt-orange-800:  #872E13;
+  --burnt-orange-900:  #5C1E0C;
+  --burnt-orange-1000: #3A1206;
+
+  /* stack */
+  --stack-100:  #EEF4FE;
+  --stack-200:  #D0E1FC;
+  --stack-300:  #B1CEF9;
+  --stack-400:  #73A9F4;
+  --stack-500:  #3C87F0;
+  --stack-600:  #0C68EB;
+  --stack-700:  #0A53A8;
+  --stack-800:  #083A78;
+  --stack-900:  #06254F;
+  --stack-1000: #03142F;
+
+  /* deep sky */
+  --deep-sky-100:  #EAF6FF;
+  --deep-sky-200:  #CFEDFF;
+  --deep-sky-300:  #B3E3FF;
+  --deep-sky-400:  #78C9FF;
+  --deep-sky-500:  #3EB4FF;
+  --deep-sky-600:  #009EFF;
+  --deep-sky-700:  #006FAF;
+  --deep-sky-800:  #004C78;
+  --deep-sky-900:  #00304F;
+  --deep-sky-1000: #001A2E;
+
+  /* lime */
+  --lime-100:  #F7FCE8;
+  --lime-200:  #EEF8CE;
+  --lime-300:  #E2F3AE;
+  --lime-400:  #CAE974;
+  --lime-500:  #B3E03D;
+  --lime-600:  #9BD60B;
+  --lime-700:  #76972A;
+  --lime-800:  #5D7827;
+  --lime-900:  #475C23;
+  --lime-1000: #35431E;
+
+  /* fuschia */
+  --fuschia-100:  #FEF3FA;
+  --fuschia-200:  #FBE3F2;
+  --fuschia-300:  #F8D0EA;
+  --fuschia-400:  #F2A9D8;
+  --fuschia-500:  #EC85C7;
+  --fuschia-600:  #E661B5;
+  --fuschia-700:  #B74379;
+  --fuschia-800:  #8F2B52;
+  --fuschia-900:  #6B1D3A;
+  --fuschia-1000: #4E1329;
+
+  /* forest green */
+  --forest-green-100:  #EAF9EF;
+  --forest-green-200:  #D4F4DD;
+  --forest-green-300:  #ACEBC0;
+  --forest-green-400:  #74DA93;
+  --forest-green-500:  #43C66A;
+  --forest-green-600:  #17B04A;
+  --forest-green-700:  #10843A;
+  --forest-green-800:  #0B5A24;
+  --forest-green-900:  #073815;
+  --forest-green-1000: #041F0B;
+
+  /* fire red */
+  --fire-red-100:  #FDEDED;
+  --fire-red-200:  #F9D0D0;
+  --fire-red-300:  #F4B3B3;
+  --fire-red-400:  #EB7D7D;
+  --fire-red-500:  #E04E4E;
+  --fire-red-600:  #CE2121;
+  --fire-red-700:  #A01B1B;
+  --fire-red-800:  #731414;
+  --fire-red-900:  #4A0D0D;
+  --fire-red-1000: #2A0606;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SEMANTIC TOKENS  (Pax naming conventions)
+   Using @theme inline so these override Pax's own @theme inline
+   definitions in the Tailwind v4 build pipeline.
+───────────────────────────────────────────────────────────── */
+@theme inline {
+  /* focus */
+  --color-focus-ring: var(--deep-sky-600);
+
+  /* surface */
+  --color-surface-primary:   var(--midnight-100);
+  --color-surface-secondary: var(--midnight-200);
+  --color-surface-tertiary:  var(--midnight-300);
+  --color-surface-inverse:   var(--midnight-1100);
+  --color-surface-brand:     var(--midnight-1100);
+  --color-surface-overlay:   rgba(14, 20, 27, 0.60);
+
+  /* content */
+  --color-content-primary:    var(--midnight-1100);
+  --color-content-secondary:  var(--midnight-900);
+  --color-content-tertiary:   var(--midnight-700);
+  --color-content-quaternary: var(--midnight-500);
+  --color-content-inverse:    var(--midnight-100);
+  --color-content-brand:      var(--stack-800);
+
+  /* action / primary */
+  --color-action-primary-main:          var(--stack-600);
+  --color-action-primary-light:         var(--stack-200);
+  --color-action-primary-dark:          var(--stack-800);
+  --color-action-primary-contrast-text: var(--midnight-100);
+
+  /* action / secondary */
+  --color-action-secondary-main:          var(--midnight-800);
+  --color-action-secondary-light:         var(--midnight-400);
+  --color-action-secondary-dark:          var(--midnight-1100);
+  --color-action-secondary-contrast-text: var(--midnight-100);
+
+  /* action / danger */
+  --color-action-danger-main:          var(--fire-red-600);
+  --color-action-danger-light:         var(--fire-red-100);
+  --color-action-danger-dark:          var(--fire-red-800);
+  --color-action-danger-contrast-text: var(--midnight-100);
+
+  /* action / link */
+  --color-action-link-main:        var(--stack-600);
+  --color-action-link-light:       var(--stack-200);
+  --color-action-link-dark:        var(--stack-800);
+  --color-action-link-decoration:  color-mix(in srgb, var(--color-action-link-main) 30%, transparent);
+
+  /* feedback / success */
+  --color-feedback-success-main:          var(--forest-green-600);
+  --color-feedback-success-light:         var(--forest-green-100);
+  --color-feedback-success-dark:          var(--forest-green-800);
+  --color-feedback-success-border:        var(--forest-green-300);
+  --color-feedback-success-contrast-text: var(--midnight-100);
+
+  /* feedback / warning */
+  --color-feedback-warning-main:          var(--golden-yellow-600);
+  --color-feedback-warning-light:         var(--golden-yellow-100);
+  --color-feedback-warning-dark:          var(--golden-yellow-800);
+  --color-feedback-warning-border:        var(--golden-yellow-300);
+  --color-feedback-warning-contrast-text: var(--midnight-100);
+
+  /* feedback / danger */
+  --color-feedback-danger-main:          var(--fire-red-600);
+  --color-feedback-danger-light:         var(--fire-red-100);
+  --color-feedback-danger-dark:          var(--fire-red-700);
+  --color-feedback-danger-border:        var(--fire-red-200);
+  --color-feedback-danger-contrast-text: var(--midnight-100);
+
+  /* feedback / information */
+  --color-feedback-information-main:          var(--stack-600);
+  --color-feedback-information-light:         var(--stack-100);
+  --color-feedback-information-dark:          var(--stack-700);
+  --color-feedback-information-border:        var(--stack-200);
+  --color-feedback-information-contrast-text: var(--midnight-100);
+
+  /* border / primary */
+  --color-border-primary-subtle: rgba(74, 80, 86, 0.20);
+  --color-border-primary-main:   var(--midnight-400);
+  --color-border-primary-light:  var(--midnight-300);
+  --color-border-primary-dark:   var(--midnight-500);
+
+  /* border / brand */
+  --color-border-brand-primary:          var(--stack-600);
+  --color-border-brand-primary-subtle:   rgba(12, 104, 235, 0.20);
+  --color-border-brand-secondary:        var(--midnight-800);
+  --color-border-brand-secondary-subtle: rgba(74, 80, 86, 0.20);
+
+  /* border / semantic */
+  --color-border-information:        var(--stack-500);
+  --color-border-information-subtle: rgba(12, 104, 235, 0.20);
+  --color-border-success:            var(--forest-green-600);
+  --color-border-success-subtle:     rgba(23, 176, 74, 0.20);
+  --color-border-danger:             var(--fire-red-600);
+  --color-border-danger-subtle:      rgba(206, 33, 33, 0.20);
+}
+
+/* Non-color tokens stay in :root — shadows, radii, viz, and raw RGB
+   channel values that aren't Tailwind color utilities */
+:root {
+  --color-border-brand-primary-rgb:      12 104 235;
+  --color-border-brand-secondary-rgb:    74 80 86;
+
+  /* shadows */
+  --shadow-whisper:  0px 1px 2px 0px rgba(14, 20, 27, 0.05);
+  --shadow-soft:     0px 2px 4px 0px rgba(14, 20, 27, 0.06);
+  --shadow-elevate:  0px 5px 6px 0px rgba(14, 20, 27, 0.08);
+  --shadow-elevate3: 0px 3px 8px rgba(14, 20, 27, 0.2);
+
+  /* radius */
+  --radius-xs:  4px;
+  --radius-sm:  6px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 28px;
+
+  /* visualization / categorical */
+  --viz-cat-01: var(--deep-sky-600);
+  --viz-cat-02: var(--golden-yellow-600);
+  --viz-cat-03: var(--fuschia-600);
+  --viz-cat-04: var(--lime-600);
+  --viz-cat-05: var(--burnt-orange-600);
+  --viz-cat-06: var(--fire-red-600);
+  --viz-cat-07: var(--forest-green-600);
+  --viz-cat-08: var(--stack-600);
+
+  /* visualization / diverging */
+  --viz-div-negative-100: var(--fire-red-200);
+  --viz-div-negative-500: var(--fire-red-500);
+  --viz-div-neutral-100:  var(--midnight-300);
+  --viz-div-neutral-500:  var(--midnight-500);
+  --viz-div-positive-100: var(--forest-green-200);
+  --viz-div-positive-500: var(--forest-green-500);
+  --viz-div-warning-100:  var(--burnt-orange-200);
+  --viz-div-warning-500:  var(--burnt-orange-500);
+  --viz-div-info-100:     var(--stack-200);
+  --viz-div-info-500:     var(--stack-500);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SHADCN / TAILWIND BRIDGE  (HSL channels — consumed by tailwind.config.ts)
+───────────────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    /* backgrounds */
+    --background:           220 14% 97%;   /* surface/secondary  = midnight/200  */
+    --foreground:           212 32%  8%;   /* content/primary    = midnight/1100 */
+
+    --card:                   0  0% 100%;  /* surface/primary    = midnight/100  */
+    --card-foreground:      212 32%  8%;
+
+    --popover:                0  0% 100%;
+    --popover-foreground:   212 32%  8%;
+
+    /* brand */
+    --primary:              142 79% 29%;   /* action/primary/main = forest-green/700 */
+    --primary-foreground:     0  0% 100%;
+
+    --secondary:            220 14% 97%;   /* surface/secondary  = midnight/200  */
+    --secondary-foreground: 212 32%  8%;
+
+    --muted:                220 15% 94%;   /* surface/tertiary   = midnight/300  */
+    --muted-foreground:     212  6% 42%;   /* content/tertiary   = midnight/700  */
+
+    --accent:               137 57% 89%;   /* action/primary/light = forest-green/200 */
+    --accent-foreground:    142 79% 20%;   /* action/primary/dark  = forest-green/800 */
+
+    /* status */
+    --destructive:            0 73% 47%;   /* feedback/danger/main  = fire-red/600    */
+    --destructive-foreground: 0  0% 100%;
+
+    --warning:               44 100% 57%;  /* feedback/warning/main = golden-yellow/600 */
+    --warning-foreground:   212 32%  8%;
+
+    --success:              142 79% 39%;   /* feedback/success/main = forest-green/600 */
+    --success-foreground:     0  0% 100%;
+
+    /* chrome */
+    --border:               220 15% 94%;   /* border/primary/light = midnight/300 */
+    --input:                220 10% 86%;   /* border/primary/main  = midnight/400 */
+    --ring:                 210 100% 56%;  /* --color-focus-ring = #1E90FF        */
+
+    --radius: 0.5rem;
+
+    /* sidebar */
+    --sidebar-background:           220 14% 97%;
+    --sidebar-foreground:           210 10% 23%;  /* content/secondary = midnight/900 */
+    --sidebar-primary:              142 79% 29%;
+    --sidebar-primary-foreground:   142 79% 29%;
+    --sidebar-accent:               220 15% 94%;
+    --sidebar-accent-foreground:    212 32%  8%;
+    --sidebar-border:               220 15% 94%;
+    --sidebar-ring:                 142 79% 29%;
+    --sidebar-muted:                212  6% 42%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border-primary-light);
+  }
+
+  body {
+    background-color: var(--color-surface-secondary);
+    color: var(--color-content-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* Pax CommandInput delegates focus ring to its parent via focus-within.
+     The global rule above would override focus-visible:outline-hidden on the
+     input, causing a double ring. Suppress it here so Pax's pattern works. */
+  [cmdk-input]:focus-visible {
+    outline: none;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  /* Pax inline link style — use on <a>, <Link>, or <button> acting as a text link */
+  .link {
+    color: var(--color-action-link-main);
+    text-decoration-line: underline;
+    text-decoration-style: solid;
+    text-underline-offset: 2px;
+    text-decoration-thickness: 1.5px;
+    text-decoration-color: var(--color-action-link-decoration);
+    transition: color 150ms ease;
+  }
+  .link:hover {
+    color: var(--color-action-link-dark);
+  }
+}

@@ -1,0 +1,176 @@
+# Architecture
+
+## Component Structure
+
+```
+src/
+  App.jsx               Router + ModeProvider + PanelProvider root
+  main.jsx              MSW bootstrap → createRoot
+  index.css             Tailwind v4 + Pax theme import
+
+  components/
+    layout/
+      AppShell.jsx      Layout route: Sidebar + TopBar + flex row (main + GlobalPanel)
+      Sidebar.jsx       Fixed left nav with NavLink active states
+      TopBar.jsx        Test/Live toggle, amber banner
+      GlobalPanel.jsx   Page-level push panel (reads PanelContext, fetches by ID)
+      DetailPanel.jsx   PanelSection + PanelRow compound components (used by GlobalPanel)
+    ui/
+      Badge.jsx         Semantic status/type pill badges
+      CopyButton.jsx    Clipboard with tick confirmation
+      EmptyState.jsx    No-results state with optional clear action
+      ErrorState.jsx    Fetch failure state with retry
+      Sparkline.jsx     Recharts AreaChart wrapper
+      StatCard.jsx      Overview balance cards with skeleton
+      Timeline.jsx      Transaction detail vertical stepper
+
+  pages/
+    Overview.jsx        Balance + sparkline + actions + recent txns + accounts; "Send funds" → SendFundsModal
+    Transactions.jsx    Full table, filters, pagination; calls openPanel('transaction', id)
+    Accounts.jsx        Table, summary banner; calls openPanel('account', id)
+    Recipients.jsx      Table (name/customer/destination/rail/status/created); calls openPanel('recipient', id)
+    Customers.jsx       Table; calls openPanel('customer', id)
+    ApiKey.jsx          Masked key display
+    Webhooks.jsx        Endpoint list + inline add form
+
+  components/ui/
+    SendFundsModal.jsx  4-step transfer initiation modal (see below)
+
+  context/
+    ModeContext.jsx     Global Test/Live state; useMode() hook
+    PanelContext.jsx    Global panel state; usePanelContext() → { panelState, openPanel, closePanel }
+
+  hooks/
+    useTransactions.js  useTransactions (list) + useTransaction(id) (single record)
+    useAccounts.js      useAccounts (list) + useAccount(id) (single record)
+    useCustomers.js     useCustomers (list) + useCustomer(id) (single record)
+    useRecipients.js    useRecipients({ customerId, type, status, page, limit }) + useRecipient(id)
+    useTransfers.js     useTransfers({ customerId, status, page, limit }) + useTransfer(id)
+
+  lib/
+    format.js           All formatting (currency, dates, relative time)
+
+  mocks/
+    fixtures/           Raw data arrays
+    handlers.js         MSW route handlers
+    browser.js          MSW worker setup
+```
+
+## Routing
+
+Uses `createBrowserRouter` (HTML5 History API). AppShell is a layout route
+(no path) that renders the shell and an `<Outlet />` for the active child.
+
+```
+/                   → Overview
+/transactions       → Transactions
+/accounts           → Accounts
+/recipients         → Recipients
+/customers          → Customers
+/settings/api-key   → ApiKey
+/settings/webhooks  → Webhooks
+```
+
+## Data Flow
+
+1. Component mounts → calls custom hook (e.g. `useTransactions`)
+2. Hook reads `mode` from `useMode()` (ModeContext)
+3. Hook builds URL: `/api/transactions?page=1&mode=live`
+4. MSW Service Worker intercepts the fetch
+5. Handler reads fixture data, applies filters, returns paginated JSON
+6. Hook sets `{ data, loading, error }` state
+7. Component renders based on state
+
+## State Management
+
+- **Global:** ModeContext (Test/Live mode), PanelContext (open panel + selected ID)
+- **Page-level:** useState for filters, pagination only (selectedId moved to PanelContext)
+- **Server state:** Custom hooks (no React Query — overkill for a prototype)
+
+## SendFundsModal
+
+`src/components/ui/SendFundsModal.jsx` — 4-step transfer initiation flow.
+
+**Why modal, not push panel:** The panel is a viewer (non-blocking, informational).
+Send Funds is a state-changing sequential flow — the modal blocks intentionally and
+returns the user to where they were after completion.
+
+**Step state pattern:** `useState` for `step` (integer 1–4) + flat `formData` object.
+No reducer: transitions are linear (step ± 1), formData is shallow. State is
+co-located and resets automatically when the modal unmounts on close.
+
+**Steps:**
+1. Select source account (merchant accounts with balance > 0)
+2. Select recipient (filter by customer, then pick from active recipients list)
+3. Enter amount (currency label, conversion note if cross-type, optional merchant ref)
+4. Confirm summary → POST /api/transfers → success state with transfer ID
+
+**preselectedAccountId prop:**
+When provided (from AccountDetail panel), formData initializes to that account
+and the modal starts at step 2. Parent uses `key={preselectedAccountId ?? 'generic'}`
+to force a fresh component instance.
+
+**Triggered from:**
+- Overview "Send funds" quick action button (no preselection — starts at step 1)
+- AccountDetail panel "Send funds" button (preselectedAccountId — starts at step 2)
+
+**Known limitations:**
+- "Add recipient" / "+ New recipient" links show "Coming soon" toast (bank resolution
+  flow not yet implemented)
+- Rail is read-only — pre-populated from recipient; override UI not built (one rail
+  per recipient in current data model)
+
+## Push Panel Layout
+
+The panel is rendered at the AppShell level, not inside individual pages.
+This makes it a flex sibling of `<main>`, so when it opens the content area
+physically reflows narrower — no overlay, no backdrop.
+
+```
+AppShell
+  <Sidebar />                       ← fixed 224px left column
+  <div ml-56 flex flex-col>
+    <TopBar />
+    <div flex flex-1 overflow-hidden>   ← the push row
+      <main flex-1 overflow-y-auto>     ← content area: reflows when panel opens
+        <Outlet />
+      </main>
+      <GlobalPanel />                   ← width: 0 → 420px, animates in
+    </div>
+  </div>
+```
+
+Width animation (not translateX) is intentional: translateX would still
+reserve 420px of space in the flex row, so the content area wouldn't reflow.
+
+### PanelContext API
+
+```js
+const { panelState, openPanel, closePanel } = usePanelContext()
+
+// panelState: { type: null | 'transaction' | 'account' | 'customer', id: null | string }
+// openPanel: calling with the same type+id toggles closed (deselects)
+// closePanel: always closes
+```
+
+Pages call `openPanel(type, id)` on row click. AppShell closes the panel on
+route change via `useEffect` on `location.pathname`.
+
+### GlobalPanel fetching
+
+GlobalPanel uses individual-record hooks (`useTransaction(id)`, `useAccount(id)`,
+`useCustomer(id)`) to fetch detail data. MSW intercepts with 150–300ms latency.
+A `PanelSkeleton` covers the loading state.
+
+### Column hiding when panel is open
+
+When the panel opens and the table narrows by 420px, specific low-priority
+columns are hidden rather than allowing horizontal scroll:
+
+- **Transactions:** Source column hidden (recoverable in panel Conversion/Transfer section)
+- **Accounts:** No columns hidden (all columns are short and survive the narrowing)
+- **Customers:** Created column hidden (recoverable in panel Profile section)
+
+Horizontal scroll was rejected because it creates two competing scroll axes
+(table scrolls right, panel scrolls down, page scrolls up) — spatially confusing
+and breaks the mental model of a single coherent view.
