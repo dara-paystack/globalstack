@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
+import { Download } from 'lucide-react'
+import { usePageTitle } from '../lib/usePageTitle'
 import {
   Skeleton,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
@@ -135,6 +137,7 @@ function ExportBanner({ onDismiss }) {
 // AuditLog page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AuditLog() {
+  usePageTitle('Audit Log')
   // 'all' is the Radix sentinel for "no filter selected"
   const [actor, setActor] = useState('all')
   const [actionCategory, setActionCategory] = useState('all')
@@ -286,9 +289,7 @@ export default function AuditLog() {
           onClick={handleExport}
           className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-border-primary-main text-sm font-medium text-content-secondary hover:text-content-primary hover:border-border-primary-dark transition-colors cursor-pointer"
         >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M7 1v8M4 6l3 3 3-3M2 10v1a1 1 0 001 1h8a1 1 0 001-1v-1" />
-          </svg>
+          <Download width={14} height={14} strokeWidth={1.75} />
           Export CSV
         </button>
         {/* Export notification banner — inline next to the button so it doesn't

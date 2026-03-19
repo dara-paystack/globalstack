@@ -14,6 +14,8 @@
 // the intent visible without shipping an incomplete flow.
 
 import { useState } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { usePageTitle } from '../lib/usePageTitle'
 import {
   Skeleton,
   Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext,
@@ -80,6 +82,7 @@ function ComingSoonToast({ visible }) {
 }
 
 export default function Recipients() {
+  usePageTitle('Recipients')
   const [customerFilter, setCustomerFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -154,9 +157,7 @@ export default function Recipients() {
               </option>
             ))}
           </select>
-          <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-content-tertiary" width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-content-tertiary" width={10} height={10} strokeWidth={1.25} />
         </div>
 
         {/* Type filter */}
@@ -170,9 +171,7 @@ export default function Recipients() {
             <option value="fiat">Bank account</option>
             <option value="crypto">Crypto wallet</option>
           </select>
-          <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-content-tertiary" width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-content-tertiary" width={10} height={10} strokeWidth={1.25} />
         </div>
 
         {/* Status filter */}
@@ -186,9 +185,7 @@ export default function Recipients() {
             <option value="active">Active</option>
             <option value="archived">Archived</option>
           </select>
-          <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-content-tertiary" width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-content-tertiary" width={10} height={10} strokeWidth={1.25} />
         </div>
 
         {hasActiveFilters && (
@@ -291,8 +288,10 @@ export default function Recipients() {
                   <tr
                     key={recipient.id}
                     onClick={() => openPanel('recipient', recipient.id)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel('recipient', recipient.id) } }}
+                    tabIndex={0}
                     className={[
-                      'cursor-pointer transition-colors',
+                      'cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary-main focus-visible:ring-inset',
                       isActive ? 'bg-surface-secondary' : 'hover:bg-surface-secondary',
                     ].join(' ')}
                   >

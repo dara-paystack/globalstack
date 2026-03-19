@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { usePageTitle } from '../lib/usePageTitle'
 import { Skeleton, Alert, AlertDescription, AlertWarningIcon } from '@paystack/pax'
 import { Badge } from '../components/ui/Badge'
 import { ErrorState } from '../components/ui/ErrorState'
@@ -7,6 +8,7 @@ import { usePanelContext } from '../context/PanelContext'
 import { formatRelative } from '../lib/format'
 
 export default function Webhooks() {
+  usePageTitle('Webhooks')
   const [webhooks, setWebhooks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)

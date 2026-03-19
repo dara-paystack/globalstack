@@ -15,6 +15,8 @@
 // our charting dependency.
 
 import { useState, useEffect, useId, useRef } from 'react'
+import { Copy } from 'lucide-react'
+import { usePageTitle } from '../lib/usePageTitle'
 import { auditLog, actors } from '../mocks/fixtures/auditLog'
 import {
   AreaChart,
@@ -82,6 +84,7 @@ function UsageTooltip({ active, payload, label }) {
 }
 
 export default function ApiKey() {
+  usePageTitle('API Key')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -227,15 +230,7 @@ export default function ApiKey() {
                     aria-label="Copy key to clipboard"
                     className="ml-1.5 p-1 rounded text-content-tertiary hover:bg-surface-tertiary hover:text-content-primary transition-colors cursor-pointer shrink-0"
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16">
-                      <rect x="5" y="5" width="8" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.25" />
-                      <path
-                        d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v7A1.5 1.5 0 003.5 12H5"
-                        stroke="currentColor"
-                        strokeWidth="1.25"
-                        strokeLinecap="round"
-                      />
-                    </svg>
+                    <Copy className="w-3.5 h-3.5" strokeWidth={1.25} />
                   </button>
                 </div>
 

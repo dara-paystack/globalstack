@@ -24,6 +24,192 @@ would be messy and brittle" is useful. "This is a React pattern" is not.
 CURRENT STATUS — Updated Mar 19, 2026
 ═══════════════════════════════════════════════════════════
 
+✅ Step 27: TopBar removed — Live indicator moved to sidebar wordmark row (Mar 19, 2026)
+
+  TopBar.jsx is no longer mounted. The component file is preserved but unused.
+
+  Live/Test mode indicator: now in Sidebar.jsx, inline with the GlobalStack wordmark.
+    - Wordmark row is a flex row: logo (left) + mode pill (right), both vertically centered.
+    - Pill is slightly tighter than the old TopBar version: px-2 py-0.5 text-[11px] — fits
+      comfortably in the 224px sidebar without competing with the wordmark.
+    - Clicking the pill still calls setMode() via useMode() — toggle logic unchanged.
+    - aria-label + aria-pressed preserved on the button element.
+    - Green dot in live mode, amber dot + amber styling in test mode — same as before.
+
+  Test mode amber banner: now renders at the top of <main> in AppShell.jsx, before
+    the p-16 padding block. It spans the full content area width (not indented).
+    This is the correct location — it's content-area context, not persistent chrome.
+
+  AppShell layout change:
+    - Removed the intermediate flex-col wrapper that stacked TopBar above the flex row.
+    - <div className="ml-56 flex h-screen overflow-hidden"> now directly contains
+      <main> and <GlobalPanel> as siblings. Simpler structure, fewer DOM nodes.
+
+✅ Step 25: Team page — who has access and what they can do (Mar 19, 2026)
+
+  Route: /settings/team (sidebar under ADMIN, below Audit Log)
+  Icon: UsersRound (Lucide)
+
+  Fixture: src/mocks/fixtures/team.js — 6 team members
+    Tolu Adeyinka   Admin      Active      (current user — "You" badge)
+    Amara Osei      Developer  Active
+    Chisom Eze      Finance    Active
+    Bola Fashola    Developer  Invited     (hasn't accepted yet)
+    Ngozi Okafor    Finance    Active
+    Kweku Mensah    Admin      Suspended
+
+  Schema: id, name, email, role (admin|developer|finance), status (active|invited|suspended),
+          avatarInitials, joinedAt (null if invited), invitedAt, lastActiveAt (null if invited)
+
+  MSW handler: GET /api/team — returns all members sorted: active → invited → suspended.
+    Within active, sorted by joinedAt ascending (longest-serving first).
+    No mode separation — team membership is not test/live-mode data.
+
+  Three roles and their access levels (informational only — NOT enforced in prototype):
+    Admin:     Full access — all pages including API Key, Webhooks, Audit Log, Team.
+               Typically the technical or business owner.
+    Developer: Technical access — all pages except Audit Log and Team.
+               Typically an engineer integrating the API.
+    Finance:   Operational access — Overview, Transactions, Accounts, Recipients, Customers only.
+               Cannot access API Key, Webhooks, Audit Log, or Team.
+               Typically an ops or finance team member monitoring activity and balances.
+
+  Page layout:
+    - Header: "Team" + subtitle "People with access to this dashboard."
+    - Top row: member count (left) + "+ Invite member" button (right)
+    - "+ Invite member": UI only — shows inline InviteBanner: "Invitations are sent by your
+      account manager. Contact support@globalstack.io to add team members." Auto-dismisses 5s.
+    - Team table: Member (avatar + name + email) | Role | Status | Last active | Joined
+    - Roles reference: collapsible permissions matrix, collapsed by default
+
+  "You" badge: small secondary Chip rendered inline after Tolu Adeyinka's name.
+    Matched by CURRENT_USER_NAME constant = 'Tolu Adeyinka'. In a real app this
+    comes from an auth context; the name-match pattern avoids needing auth in the prototype.
+
+  Suspended members (Kweku Mensah): name/email in muted color; lastActiveAt preserved
+    (shows last known session date, not "Never"). Row is not alarming — suspension
+    is a normal operational state. No action buttons (unsuspend, delete) — not self-service.
+
+  Permissions matrix (Role permissions section):
+    - Collapsed by default — reference documentation, not operational information
+    - Simple chevron toggle (no Pax Accordion — availability not confirmed)
+    - ✓ in success color (text-feedback-success-main) — access is a positive state
+    - ✗ in quaternary muted — absence of access is neutral, not an error (not red)
+    - Striped rows for scannability
+
+  Badge.jsx: added `invited: 'information'` and `suspended: 'secondary'` to STATUS_COLOR.
+
+KNOWN LIMITATIONS:
+  - RBAC is NOT enforced — all logged-in users can see all pages regardless of role.
+    The Team page documents the intended access model; it does not implement it.
+  - Invite and suspension are not self-service. "+ Invite member" shows an informational
+    banner directing operators to contact support. No form or API call is made.
+  - CURRENT_USER_NAME is hardcoded as 'Tolu Adeyinka' — not derived from an auth context.
+    The "You" badge relies on a name match between the sidebar identity and the fixture.
+  - formatRelative() uses Date.now() — lastActiveAt timestamps will appear increasingly
+    old as time passes from the fixture anchor date (2026-03-19).
+
+✅ Step 26: Send Funds modal — redesigned to match Retry refund modal design language (Mar 19, 2026)
+
+  Design reference: Paystack "Retry refund" modal (screenshot in /references/).
+  Goal: extract the design language, not copy the content.
+
+  LABELED NODE STEPPER (replaces pill dots + "Step X of 4"):
+  - 4 nodes: Account → Recipient → Amount → Confirm
+  - Completed steps: filled circle + checkmark SVG, muted label
+  - Active step: filled circle (no checkmark — step not yet complete), primary-color label
+  - Upcoming steps: dashed outlined circle, muted label, 50% opacity
+  - Connector lines between nodes: fills with action-primary-main as steps complete
+  - Built without keyed React.Fragment — elements array pattern avoids the import
+  - Lives in the modal header (persistent chrome), separated from step content by a border
+
+  PER-STEP TITLE + SUBTITLE:
+  - STEP_HEADERS constant: 4 entries with { title, subtitle }
+  - Title: text-lg font-semibold, renders as h2 with aria-labelledby — the dialog's
+    accessible name changes meaningfully at each step
+  - Subtitle: text-sm text-content-secondary — explains what the user is deciding now
+  - Replaces the static "Send funds" header that never changed
+
+  CARD ROWS FOR READ-ONLY DATA (ReadOnlyCard component):
+  - New shared sub-component: label (top-left, text-xs muted), primary (text-sm font-medium),
+    secondary (text-xs font-mono muted), trailingPrimary (text-sm font-semibold), trailingSecondary
+  - Used in Step 3 for both "From" (source account + balance) and "To" (recipient + rail)
+  - Previously only the "From" card existed; "To" was bare text in the parent
+  - Visual separation between committed state and editable fields is the key UX benefit
+
+  FORM FIELD LABELS:
+  - Changed from: text-xs font-medium uppercase tracking-wide (bureaucratic, dense)
+  - Changed to: text-sm font-medium text-content-primary (readable, sentence case)
+  - Consistent with the reference's label style throughout
+
+  INPUT SIZES:
+  - h-9/h-10 → h-11 (more presence, matches generous internal padding)
+  - rounded-lg → rounded-xl (softer, consistent with card corners)
+  - px-3 → px-3.5 (slightly more internal padding for breathing room)
+
+  RADIO-STYLE SELECTION INDICATORS:
+  - Account cards (Step 1) and recipient cards (Step 2): radio-style circle selector
+    (border-2 circle, filled with white dot when selected) replaces the checkmark-in-circle
+  - More conventional form interaction pattern — feels less like an app action, more like a form
+
+  BUTTONS:
+  - "Continue →" → "Continue" (arrow removed from primary button)
+  - "Confirm transfer →" → "Confirm transfer" (arrow removed)
+  - "View in transactions →" kept in success state (it's a navigation link, not a primary action)
+  - Footer layout unchanged: [← Back] left, [Cancel][Continue] right
+
+  FOOTER PATTERN (established convention for this dashboard):
+  - Back button: bottom-left, text-only, directional
+  - Cancel + Continue/Confirm: bottom-right, side by side
+  - Separates navigation (Back) from decisions (Cancel, Continue)
+  - This is now the established pattern for any multi-step modal flow
+
+KNOWN LIMITATIONS:
+  - Step indicator does not animate between steps (no slide transition on the nodes)
+  - ReadOnlyCard is defined inline in SendFundsModal.jsx — not yet extracted to shared ui/
+
+✅ Step 24: Overview balance card — total balance with composition breakdown (Mar 19, 2026)
+
+  Design decision: toggle approach was considered and rejected. A toggle frames two
+  things as alternatives; a breakdown frames them as components. The operator's
+  first question is "how much flows through my infrastructure?" — the total answers
+  that. The breakdown answers the follow-up: "what's mine vs in custody?" These are
+  hierarchical questions, not either/or — hence total-first with decomposition rows.
+
+  Overview.jsx:
+  - Replaced both the col-span-2 merchant card and col-span-1 customer card with a
+    single full-width card showing total USDC balance across all accounts
+  - Total balance = treasuryBalance + customerUsdcBalance (merchant + customer USDC)
+  - Primary number: text-[38px] font-semibold — the largest number on the page
+  - Trend: derived from totalSparkline (computed below), shown in green/red
+  - Sparkline: totalSparkline — sum of merchant + customer sparkline at each data point.
+    Both series share the same 7-day anchor, so they have identical day labels.
+    Summing point-by-point gives aggregate infrastructure balance over time.
+  - Breakdown section below the sparkline: two read-only rows (not interactive):
+      Your balance    [amount]  [blue bar]   [pct%]
+      Customer funds  [amount]  [green bar]  [pct%]
+    - Bar colors: cerulean-600 (merchant, matches default sparkline blue),
+      stack-green-600 (customer, distinct but harmonious)
+    - Bar track: bg-surface-secondary, 6px tall, 120px wide, rounded-md
+    - Percentage: (amount / total) * 100, shown to 1 decimal place
+    - Breakdown rows are NOT interactive — no hover, no click, no cursor-pointer
+  - Two-column layout below the card is unchanged
+  - Merchant metadata: "{Account label} · {Chain} · USDC" (e.g. "Primary Wallet · Base · USDC")
+  - Customer metadata: "{n} accounts · {m} customers"
+  - Crossfade: 100ms opacity transition — content fades to 0, view updates, fades back.
+    Implemented with `fading` boolean state + setTimeout(100ms). No bounce, no slide.
+  - Toggle is cosmetic only — does NOT filter transactions, accounts, or any other content
+  - The customer funds card is removed entirely; the space it occupied is now part of
+    the single balance card (wider, more prominent number at text-3xl)
+  - CHAIN_LABELS defined locally in Overview.jsx (small subset; avoids importing from
+    GlobalPanel which is a component file — not a shared module)
+  - Two-column layout below the balance card is unchanged
+
+KNOWN LIMITATIONS ADDED:
+  - Toggle state resets to "merchant" on page navigation (no persistence — intentional)
+  - The metadata line for merchant state derives from the first USDC merchant account;
+    if no such account exists, falls back to plain "USDC"
+
 ✅ Step 23: Pre-review polish pass — 8 data model + UX correctness fixes (Mar 19, 2026)
 
   1. Transaction IDs: renamed from txn_xxx to tx_xxxabc (3 extra alphanumeric chars appended).
@@ -431,6 +617,9 @@ STACK
 - @paystack/pax 2.0.0 — design system (Tailwind v4 via @tailwindcss/vite)
 - Mock Service Worker (msw) v2 — API simulation
 - Recharts v3 — charts/sparklines
+- lucide-react — ALL icons. Never write inline SVG. Always import from lucide-react.
+  Usage: import { X, Check, ChevronDown, ArrowLeft, Info } from 'lucide-react'
+  Sizing: width/height props (e.g. width={16} height={16}), strokeWidth prop for weight.
 
 Key: Pax uses Tailwind v4. No tailwind.config.js needed. Tokens are defined
 in @paystack/pax/dist/theme.css, imported in src/index.css via relative path
@@ -660,14 +849,14 @@ Light sidebar, fixed left. Layout:
   [bottom] AC  Acme Corp
                treasury@acme.com
 
-TOP BAR
-A prominent pill-shaped Test/Live toggle — this is an interactive switch,
-not a static badge. Sits in the top-right of the main content area.
+MODE INDICATOR
+The Live/Test pill lives in the Sidebar, inline-right of the GlobalStack
+wordmark. Clicking it toggles mode. No separate TopBar component.
 
 When in Test mode:
-- Amber banner below top bar: "You're viewing test data. No real transactions
-  will be affected."
-- Toggle renders in amber
+- Amber banner at the top of the main content area (full-width, above page padding):
+  "You're viewing test data. No real transactions will be affected."
+- Pill renders in amber styling
 
 ═══════════════════════════════════════════════════════════
 VISUAL DENSITY SYSTEM (established Mar 18 2026)
@@ -714,6 +903,7 @@ Live/Test pill:
 DO NOT
 ═══════════════════════════════════════════════════════════
 
+- Do not write inline SVG — always use lucide-react icons instead
 - Do not use a dark sidebar — explicitly changed to light
 - Do not use modals for row detail — use the slide-in DetailPanel
 - Do not import fonts from Google Fonts or external sources
@@ -728,7 +918,8 @@ DO NOT
 WHAT TO TACKLE NEXT
 ═══════════════════════════════════════════════════════════
 
-- Run dev server and verify all 8 Step 23 fixes render correctly in browser
+- Run dev server and verify all Step 23 + Step 24 changes render correctly in browser
+- Verify Overview balance card toggle crossfades cleanly between merchant/customer states
 - Verify "Send funds" from Overview + AccountDetail panel both open modal correctly
 - Verify recipient panel opens on row click in /recipients
 - Verify account number copy toast appears in AccountDetail panel

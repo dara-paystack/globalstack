@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Skeleton } from "@paystack/pax";
+import { ArrowDown, ArrowUp } from "lucide-react";
+import { Skeleton, Button } from "@paystack/pax";
+import { usePageTitle } from "../lib/usePageTitle";
 import { useTransactions } from "../hooks/useTransactions";
 import { useAccounts } from "../hooks/useAccounts";
 import { usePanelContext } from "../context/PanelContext";
@@ -87,47 +89,16 @@ function getGreeting() {
 const ACTIONS = [
   {
     label: "Add funds",
-    icon: (
-      <svg
-        width="13"
-        height="13"
-        viewBox="0 0 14 14"
-        fill="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M7 1.5v9M3 7l4 3.5L11 7"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
+    icon: <ArrowDown width={13} height={13} strokeWidth={1.5} aria-hidden="true" />,
   },
   {
     label: "Send funds",
-    icon: (
-      <svg
-        width="13"
-        height="13"
-        viewBox="0 0 14 14"
-        fill="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M7 12.5v-9M3 7L7 3.5 11 7"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
+    icon: <ArrowUp width={13} height={13} strokeWidth={1.5} aria-hidden="true" />,
   },
 ];
 
 export default function Overview() {
+  usePageTitle('Overview')
   const { data: txns, loading: txnLoading } = useTransactions({ limit: 5 });
   const { data: accounts, loading: accLoading } = useAccounts();
   const { panelState, openPanel } = usePanelContext();
@@ -170,8 +141,16 @@ export default function Overview() {
 
   const merchantSparkline = computeSparkline(merchantUsdcIds, "Primary Wallet (John)", treasuryBalance);
   const customerSparkline = computeSparkline(customerUsdcIds, "Primary Wallet (Wanjiku)", customerUsdcBalance);
-  const merchantTrend = trendPercent(merchantSparkline);
-  const customerTrend = trendPercent(customerSparkline);
+
+  // Total sparkline: sum of merchant + customer at each data point.
+  // Both series use the same 7-day anchor, so they have the same labels and length.
+  // Summing point-by-point gives the aggregate infrastructure balance over time.
+  const totalBalance = treasuryBalance + customerUsdcBalance;
+  const totalSparkline = merchantSparkline.map((pt, i) => ({
+    day: pt.day,
+    value: pt.value + customerSparkline[i].value,
+  }));
+  const totalTrend = trendPercent(totalSparkline);
 
   return (
     <>
@@ -195,85 +174,104 @@ export default function Overview() {
             "Send funds" opens the transfer modal; other buttons are non-functional stubs. */}
         <div className="flex items-center gap-2">
           {ACTIONS.map((action) => (
-            <button
+            <Button
               key={action.label}
-              onClick={action.label === "Send funds" ? () => setSendFundsOpen(true) : undefined}
               variant="outline"
               color="secondary"
-              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-border-primary-main text-sm font-medium text-content-secondary hover:text-content-primary hover:bg-surface-secondary hover:border-border-primary-main transition-colors cursor-pointer"
+              size="sm"
+              className="cursor-pointer"
+              onClick={action.label === "Send funds" ? () => setSendFundsOpen(true) : undefined}
             >
-              <span className="text-content-secondary">{action.icon}</span>
+              {action.icon}
               {action.label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
 
-      {/* ── Balance section — merchant treasury (primary) + customer funds (secondary) */}
-      <div className="grid grid-cols-3 gap-6">
-        {/* Primary: merchant treasury balance with sparkline */}
-        <div className="col-span-2 bg-surface-primary border border-border-primary-light rounded-xl pt-5 px-5 pb-0 overflow-hidden">
+      {/* ── Balance card — two-column flex layout ───────────────────────────── */}
+      {/* Left (60%): label + number + trend + sparkline.
+          Right (40%): breakdown rows, vertically centered.
+          Vertical divider separates the two halves.
+          Sparkline bleeds to the left card edge via -ml-5; the column's right
+          padding bounds it on the right. overflow-hidden clips fill to corners. */}
+      <div className="bg-surface-primary border border-border-primary-light rounded-xl overflow-hidden flex">
+
+        {/* ── Left column ── */}
+        <div className="flex-[2] min-w-0 pt-5 pl-5 pr-0 pb-0 flex flex-col">
           <div className="text-xs font-medium text-content-tertiary mb-2">
-            Your balance
+            Total balance
           </div>
+
           {accLoading ? (
             <div className="space-y-1.5">
-              <Skeleton className="h-6 w-44" />
-              <Skeleton className="h-6 w-20" />
+              <Skeleton className="h-10 w-56" />
+              <Skeleton className="h-4 w-28" />
             </div>
           ) : (
             <>
               <div className="text-2xl font-semibold text-content-primary tabular-nums leading-none">
-                {formatUSDC(treasuryBalance)}
+                {formatUSDC(totalBalance)}
               </div>
-              {merchantTrend !== null && (
+              {totalTrend !== null && (
                 <div className={[
-                  "text-xs font-medium mt-1.5",
-                  merchantTrend >= 0 ? "text-feedback-success-dark" : "text-feedback-danger-dark",
+                  "text-xs font-medium mt-2",
+                  totalTrend >= 0 ? "text-feedback-success-dark" : "text-feedback-danger-dark",
                 ].join(" ")}>
-                  {merchantTrend >= 0 ? "+" : ""}{merchantTrend.toFixed(1)}% vs 7 days ago
+                  {totalTrend >= 0 ? "+" : ""}{totalTrend.toFixed(1)}% vs 7 days ago
                 </div>
               )}
             </>
           )}
-          <div className="mt-3 -mx-5">
-            <Sparkline data={merchantSparkline} dataKey="value" height={160} />
+
+          {/* Sparkline — bleeds to the left card edge (-ml-5 cancels the pl-5
+              column padding). At 60% card width the chart lands at ~4:1 aspect
+              ratio with height=90, which feels natural without vertical stretch. */}
+          <div className="mt-3 -ml-5">
+            <Sparkline data={totalSparkline} dataKey="value" height={90} />
           </div>
         </div>
 
-        {/* Secondary: customer funds under management */}
-        <div className="bg-surface-primary border border-border-primary-light rounded-xl pt-5 px-5 pb-0 overflow-hidden">
-          <div className="text-xs font-medium text-content-tertiary mb-2">
-            Customer funds
-          </div>
-          {accLoading ? (
-            <div className="space-y-1.5">
-              <Skeleton className="h-7 w-36" />
-              <Skeleton className="h-4 w-44" />
+        {/* ── Vertical divider ── */}
+        <div className="w-px bg-border-primary-light self-stretch flex-shrink-0" />
+
+        {/* ── Right column ── */}
+        {/* justify-center groups both rows at vertical center.
+            divide-y draws the subtle separator between them without
+            any extra border markup on the individual rows. */}
+        <div className="flex-[1] flex flex-col justify-center divide-y divide-border-primary-light">
+          {[
+            {
+              label: "Your balance",
+              amount: treasuryBalance,
+              // merchantUsdcIds already computed above — reuse directly
+              meta: `${merchantUsdcIds.length} account${merchantUsdcIds.length !== 1 ? "s" : ""}`,
+            },
+            {
+              label: "Customer funds",
+              amount: customerUsdcBalance,
+              // customerAccounts.length and customerCount both computed above
+              meta: `${customerAccounts.length} account${customerAccounts.length !== 1 ? "s" : ""} · ${customerCount} customer${customerCount !== 1 ? "s" : ""}`,
+            },
+          ].map(({ label, amount, meta }) => (
+            <div key={label} className="px-6 py-4">
+              <div className="text-xs font-medium text-content-tertiary mb-2">
+                {label}
+              </div>
+              {accLoading ? (
+                <Skeleton className="h-4 w-32 mb-1" />
+              ) : (
+                <>
+                  <div className="text-md font-medium text-content-primary tabular-nums">
+                    {formatUSDC(amount)}
+                  </div>
+                  <div className="text-xs text-content-tertiary mt-0.5">
+                    {meta}
+                  </div>
+                </>
+              )}
             </div>
-          ) : (
-            <>
-              <div className="text-xl font-semibold text-content-primary tabular-nums leading-none">
-                {formatUSDC(customerUsdcBalance)}
-              </div>
-              <div className="flex items-center gap-3 mt-1.5">
-                {customerTrend !== null && (
-                  <span className={[
-                    "text-xs font-medium",
-                    customerTrend >= 0 ? "text-feedback-success-dark" : "text-feedback-danger-dark",
-                  ].join(" ")}>
-                    {customerTrend >= 0 ? "+" : ""}{customerTrend.toFixed(1)}% vs 7 days ago
-                  </span>
-                )}
-                <span className="text-sm text-content-tertiary">
-                  {customerAccounts.length} account{customerAccounts.length !== 1 ? "s" : ""} • {customerCount} customer{customerCount !== 1 ? "s" : ""}
-                </span>
-              </div>
-            </>
-          )}
-          <div className="mt-3 -mx-5">
-            <Sparkline data={customerSparkline} dataKey="value" color="#17B04A" height={120} />
-          </div>
+          ))}
         </div>
       </div>
 
@@ -311,7 +309,7 @@ export default function Overview() {
           ) : (
             <table className="w-full">
               <thead>
-                <tr className="border-b border-border-primary-light">
+                <tr className="border-b border-border-primary-light bg-surface-secondary">
                   <th className="px-4 py-2 text-left text-xs font-medium text-content-tertiary">Type</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-content-tertiary">Amount</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-content-tertiary">Status</th>
@@ -320,11 +318,16 @@ export default function Overview() {
               </thead>
               <tbody className="divide-y divide-border-primary-light">
                 {recentTxns.map((txn) => (
+                  // tabIndex={0} + onKeyDown: makes the row reachable and activatable
+                  // by keyboard. Without this, keyboard users can never open the panel.
+                  // Enter and Space are the standard keys for activating interactive elements.
                   <tr
                     key={txn.id}
                     onClick={() => openPanel("transaction", txn.id)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel("transaction", txn.id) } }}
+                    tabIndex={0}
                     className={[
-                      "cursor-pointer transition-colors",
+                      "cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary-main focus-visible:ring-inset",
                       panelState.type === "transaction" && panelState.id === txn.id
                         ? "bg-surface-secondary"
                         : "hover:bg-surface-secondary",
@@ -372,9 +375,12 @@ export default function Overview() {
                 {merchantAccounts.map((acc) => (
                   <div
                     key={acc.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => openPanel("account", acc.id)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel("account", acc.id) } }}
                     className={[
-                      "px-4 py-2.5 cursor-pointer transition-colors",
+                      "px-4 py-2.5 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary-main focus-visible:ring-inset rounded",
                       panelState.type === "account" && panelState.id === acc.id
                         ? "bg-surface-secondary"
                         : "hover:bg-surface-secondary",

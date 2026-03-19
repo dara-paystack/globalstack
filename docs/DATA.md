@@ -15,6 +15,7 @@ All mock data lives in `src/mocks/fixtures/`. These are the single source of tru
 | `webhookDeliveries.js` | 36 delivery records across both endpoints (see below) |
 | `apiKey.js` | Single API key record with extended usage metadata (see below) |
 | `auditLog.js` | 47 audit log entries across 30 days, 3 actors (see below) |
+| `team.js` | 6 team members: 3 active, 1 invited, 1 suspended, across admin/developer/finance roles |
 | `testFixtures.js` | Sparse test data: 5 txns, 3 accounts (1 merchant + 2 customer), 2 customers |
 
 ## Recipients Fixture Schema (recipients.js)
@@ -279,6 +280,56 @@ All deposit and withdrawal records, plus 9 completed fiat→USDC conversions:
   - `tosStatus === true`: green "Accepted" badge + eligibility note
   - `tosStatus === false`: amber warning block + copy TOS link
 
+## Team Fixture Schema (team.js)
+
+6 team members across 3 roles and 3 status states.
+
+**Role values:** `admin` | `developer` | `finance`
+**Status values:** `active` | `invited` | `suspended`
+
+```js
+{
+  id: 'user_001',
+  name: 'Tolu Adeyinka',
+  email: 'tolu@acmecorp.io',
+  role: 'admin',          // admin | developer | finance
+  status: 'active',       // active | invited | suspended
+  avatarInitials: 'TA',   // derived from first letter of each name part
+  joinedAt: ISO string,   // null when status === 'invited' (not yet accepted)
+  invitedAt: ISO string,  // always present
+  lastActiveAt: ISO string | null, // null when invited; preserved when suspended
+}
+```
+
+**Team members:**
+
+| ID | Name | Role | Status | Notes |
+|----|------|------|--------|-------|
+| `user_001` | Tolu Adeyinka | Admin | Active | Current user — "You" badge in UI |
+| `user_002` | Amara Osei | Developer | Active | |
+| `user_003` | Chisom Eze | Finance | Active | |
+| `user_004` | Bola Fashola | Developer | Invited | joinedAt null, lastActiveAt null |
+| `user_005` | Ngozi Okafor | Finance | Active | |
+| `user_006` | Kweku Mensah | Admin | Suspended | lastActiveAt preserved (2026-02-28) |
+
+**MSW handler — `GET /api/team`:**
+Returns all members sorted: active (joinedAt asc) → invited → suspended.
+No query params, no mode switching — team data is always real.
+
+**Role access levels (informational — not enforced in prototype):**
+
+| Page | Admin | Developer | Finance |
+|------|-------|-----------|---------|
+| Overview | ✓ | ✓ | ✓ |
+| Transactions | ✓ | ✓ | ✓ |
+| Accounts | ✓ | ✓ | ✓ |
+| Recipients | ✓ | ✓ | ✓ |
+| Customers | ✓ | ✓ | ✓ |
+| API Key | ✓ | ✓ | ✗ |
+| Webhooks | ✓ | ✓ | ✗ |
+| Audit Log | ✓ | ✗ | ✗ |
+| Team | ✓ | ✗ | ✗ |
+
 ## MSW Handler Map
 
 All handlers are in `src/mocks/handlers.js`. Every request gets 150–300ms of simulated latency.
@@ -291,6 +342,7 @@ All handlers are in `src/mocks/handlers.js`. Every request gets 150–300ms of s
 | `GET /api/accounts/:id` | Returns single account or 404 |
 | `GET /api/customers` | Returns customers filtered by `?kycStatus=` (exact match) |
 | `GET /api/customers/:id` | Returns single customer or 404 |
+| `GET /api/team` | Returns all team members sorted: active (joinedAt asc) → invited → suspended. No params. |
 | `GET /api/api-key` | Returns full apiKey fixture: key, status, created, lastUsed, lastIp, usage stats, permissions[], requestVolume[] |
 | `GET /api/webhooks` | Returns webhook list with `deliverySummary` per endpoint (total, failed, lastAt) computed server-side from deliveries fixture |
 | `GET /api/webhooks/:id` | Returns single endpoint with `deliverySummary` — used by GlobalPanel |

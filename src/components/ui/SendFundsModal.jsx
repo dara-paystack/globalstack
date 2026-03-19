@@ -20,10 +20,10 @@
 //   This skips step 1 because the source is already known — the user opened
 //   "Send funds" from a specific account panel. The prop name communicates
 //   *why* step 1 is skipped, not just *which step* to show.
-//   Parent renders with a key={preselectedAccountId ?? 'generic'} so React
-//   creates a fresh instance each time the account changes.
-
-import { useState, useEffect } from 'react'
+//   Parent renders with a key={preselectedAccountId ?? 'generic'} for fresh instances.
+//
+import { useState, useEffect, useRef } from 'react'
+import { X, Check, ChevronDown, Info, CircleAlert } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAccounts } from '../../hooks/useAccounts'
 import { useCustomers } from '../../hooks/useCustomers'
@@ -46,30 +46,7 @@ const CHAIN_LABELS = {
   ethereum: 'Ethereum',
 }
 
-// Step indicator — simple "Step X of 4" text + progress dots.
-// Not a heavy wizard component — just conditional rendering with a step counter.
-function StepIndicator({ step, total = 4 }) {
-  return (
-    <div className="flex items-center gap-3 mb-6">
-      <div className="flex gap-1.5">
-        {Array.from({ length: total }, (_, i) => (
-          <div
-            key={i}
-            className={[
-              'h-1.5 rounded-full transition-all duration-200',
-              i < step ? 'w-6 bg-action-primary-main' : 'w-3 bg-border-primary-main',
-            ].join(' ')}
-          />
-        ))}
-      </div>
-      <span className="text-xs text-content-tertiary font-medium">
-        Step {step} of {total}
-      </span>
-    </div>
-  )
-}
-
-// Coming-soon inline toast for "+ New recipient" link inside the modal
+// Coming-soon inline note for "+ New recipient" inside Step 2
 function ComingSoonNote({ visible }) {
   if (!visible) return null
   return (
@@ -79,8 +56,40 @@ function ComingSoonNote({ visible }) {
   )
 }
 
+// ReadOnlyCard — the "card row" pattern from the Retry refund reference.
+// Used for information that's already been decided: source account, selected recipient.
+// Visually separates committed state from editable form fields below.
+function ReadOnlyCard({ label, primary, secondary, trailingPrimary, trailingSecondary }) {
+  return (
+    <div className="rounded-xl border border-border-primary-light px-4 py-3.5">
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          {label && (
+            <div className="text-xs text-content-tertiary mb-1">{label}</div>
+          )}
+          <div className="text-sm font-medium text-content-primary truncate">{primary}</div>
+          {secondary && (
+            <div className="text-xs text-content-tertiary font-mono mt-0.5">{secondary}</div>
+          )}
+        </div>
+        {(trailingPrimary || trailingSecondary) && (
+          <div className="text-right shrink-0">
+            {trailingPrimary && (
+              <div className="text-sm font-semibold text-content-primary tabular-nums">{trailingPrimary}</div>
+            )}
+            {trailingSecondary && (
+              <div className="text-xs text-content-tertiary mt-0.5">{trailingSecondary}</div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function SendFundsModal({ open, onClose, preselectedAccountId }) {
   const navigate = useNavigate()
+  const modalRef = useRef(null)
 
   // Linear step state. No reducer needed — transitions are always step ± 1.
   // Start at step 2 when a source account is pre-selected (e.g. from Account panel).
@@ -166,14 +175,65 @@ export function SendFundsModal({ open, onClose, preselectedAccountId }) {
     setTimeout(() => setShowComingSoon(false), 3000)
   }
 
-  // Close on Escape key
+  // Focus management and keyboard handling when modal is open.
+  //
+  // Why a focus trap matters: without it, Tab moves focus through background
+  // content while the modal is visible. Screen reader users navigating by Tab
+  // would escape the dialog and interact with page content behind the overlay —
+  // effectively stranded with no way to know they've left the dialog.
+  //
+  // The trap works by intercepting Tab/Shift+Tab at document level: when the
+  // focused element is the first or last focusable item in the modal, we wrap
+  // focus back to the other end instead of letting it escape.
+  //
+  // Initial focus: we move focus into the modal on open so keyboard users
+  // don't have to Tab back into it after it appears.
   useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === 'Escape') onClose()
+    if (!open) return
+
+    const FOCUSABLE = [
+      'button:not([disabled])',
+      'input:not([disabled])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      'a[href]',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(', ')
+
+    const modal = modalRef.current
+    if (modal) {
+      const focusable = Array.from(modal.querySelectorAll(FOCUSABLE))
+      focusable[0]?.focus()
     }
+
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+
+      if (e.key === 'Tab' && modal) {
+        const focusable = Array.from(modal.querySelectorAll(FOCUSABLE))
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault()
+            last?.focus()
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault()
+            first?.focus()
+          }
+        }
+      }
+    }
+
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
+  }, [open, onClose])
 
   if (!open) return null
 
@@ -184,24 +244,31 @@ export function SendFundsModal({ open, onClose, preselectedAccountId }) {
       style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
       onClick={onClose}
     >
-      {/* Modal card — stop click propagation so clicks inside don't close it */}
       <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="send-funds-title"
         className="relative bg-surface-primary rounded-2xl shadow-xl w-full max-w-lg mx-4 flex flex-col"
-        onClick={e => e.stopPropagation()}
         style={{ maxHeight: 'calc(100vh - 48px)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-border-primary-light shrink-0">
-          <div className="text-base font-semibold text-content-primary">Send funds</div>
+        {/* Header — title + step counter + close button, with divider below */}
+        <div className="flex items-start justify-between px-6 py-5 border-b border-border-primary-light shrink-0">
+          <div>
+            <div id="send-funds-title" className="text-lg font-semibold text-content-primary">
+              Send funds
+            </div>
+            {!createdTransfer && (
+              <p className="text-xs text-content-tertiary mt-0.5">Step {step} of 4</p>
+            )}
+          </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-md text-content-tertiary hover:bg-surface-secondary hover:text-content-primary transition-colors cursor-pointer"
+            className="p-1.5 rounded-md text-content-tertiary hover:bg-surface-secondary hover:text-content-primary transition-colors cursor-pointer shrink-0"
             aria-label="Close"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
+            <X width={16} height={16} strokeWidth={1.5} />
           </button>
         </div>
 
@@ -211,7 +278,6 @@ export function SendFundsModal({ open, onClose, preselectedAccountId }) {
             <SuccessView transfer={createdTransfer} onClose={onClose} navigate={navigate} />
           ) : (
             <>
-              <StepIndicator step={step} />
 
               {step === 1 && (
                 <Step1SelectSource
@@ -269,14 +335,18 @@ export function SendFundsModal({ open, onClose, preselectedAccountId }) {
           )}
         </div>
 
-        {/* Footer — action buttons */}
+        {/* Footer — action buttons.
+            Layout: [← Back] bottom-left, [Cancel][Continue] bottom-right.
+            This separates navigation (Back = directional) from decisions
+            (Cancel = abort, Continue = commit). The primary action always
+            lives at the bottom-right — users build a spatial habit quickly. */}
         {!createdTransfer && (
-          <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-border-primary-light shrink-0">
+          <div className="flex items-center justify-between px-6 py-4 border-t border-border-primary-light shrink-0">
             <div>
               {step > 1 && (
                 <button
                   onClick={() => setStep(step - 1)}
-                  className="px-3 py-1.5 text-sm text-content-secondary hover:text-content-primary cursor-pointer transition-colors"
+                  className="px-3 py-2 text-sm text-content-secondary hover:text-content-primary cursor-pointer transition-colors"
                 >
                   ← Back
                 </button>
@@ -292,12 +362,14 @@ export function SendFundsModal({ open, onClose, preselectedAccountId }) {
               </button>
 
               {step < 4 ? (
+                // "Continue" — no arrow icon. The filled button style communicates
+                // primary action without decoration.
                 <button
                   onClick={() => setStep(step + 1)}
                   disabled={!canAdvance(step, formData)}
                   className="px-4 py-2 text-sm font-medium rounded-lg bg-action-primary-main text-content-inverse hover:bg-action-primary-dark disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
                 >
-                  Continue →
+                  Continue
                 </button>
               ) : (
                 <button
@@ -305,7 +377,7 @@ export function SendFundsModal({ open, onClose, preselectedAccountId }) {
                   disabled={isSubmitting || !formData.amount}
                   className="px-4 py-2 text-sm font-medium rounded-lg bg-action-primary-main text-content-inverse hover:bg-action-primary-dark disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
                 >
-                  {isSubmitting ? 'Sending…' : 'Confirm transfer →'}
+                  {isSubmitting ? 'Sending…' : 'Confirm transfer'}
                 </button>
               )}
             </div>
@@ -329,21 +401,14 @@ function canAdvance(step, formData) {
 function Step1SelectSource({ accounts, loading, selectedId, onSelect }) {
   return (
     <div>
-      <div className="text-[15px] font-medium text-content-primary mb-1">
-        Which account are you sending from?
-      </div>
-      <p className="text-sm text-content-tertiary mb-5">
-        Select a merchant account with available funds.
-      </p>
-
       {loading ? (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {[1, 2].map((i) => (
-            <div key={i} className="h-14 rounded-xl border border-border-primary-light animate-pulse bg-surface-secondary" />
+            <div key={i} className="h-16 rounded-xl border border-border-primary-light animate-pulse bg-surface-secondary" />
           ))}
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {accounts.map((account) => {
             const hasBalance = account.balance > 0
             const isSelected = selectedId === account.id
@@ -354,20 +419,31 @@ function Step1SelectSource({ accounts, loading, selectedId, onSelect }) {
                 onClick={() => hasBalance && onSelect(account.id)}
                 disabled={!hasBalance}
                 className={[
-                  'w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-colors',
+                  'w-full flex items-center justify-between px-4 py-3.5 rounded-xl border text-left transition-colors',
                   isSelected
                     ? 'border-action-primary-main bg-feedback-information-light'
                     : hasBalance
                     ? 'border-border-primary-light hover:border-border-primary-dark hover:bg-surface-secondary cursor-pointer'
-                    : 'border-border-primary-light bg-surface-secondary cursor-not-allowed opacity-60',
+                    : 'border-border-primary-light bg-surface-secondary cursor-not-allowed opacity-50',
                 ].join(' ')}
               >
-                <div>
-                  <div className="text-sm font-medium text-content-primary">
-                    {account.label}
+                <div className="flex items-center gap-3">
+                  {/* Selection indicator — radio-style circle */}
+                  <div className={[
+                    'w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors',
+                    isSelected ? 'border-action-primary-main bg-action-primary-main' : 'border-border-primary-dark',
+                  ].join(' ')}>
+                    {isSelected && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                    )}
                   </div>
-                  <div className="text-xs text-content-tertiary mt-0.5 font-mono">
-                    {account.addressShort}
+                  <div>
+                    <div className="text-sm font-medium text-content-primary">
+                      {account.label}
+                    </div>
+                    <div className="text-xs text-content-tertiary mt-0.5 font-mono">
+                      {account.addressShort}
+                    </div>
                   </div>
                 </div>
                 <div className="text-right">
@@ -423,26 +499,20 @@ function Step2SelectRecipient({
 
   return (
     <div>
-      <div className="text-[15px] font-medium text-content-primary mb-1">
-        Who are you sending to?
-      </div>
-      <p className="text-sm text-content-tertiary mb-5">
-        Select a customer and then choose their recipient.
-      </p>
-
       {/* Customer selector */}
-      <div className="mb-4">
-        <label className="text-xs font-medium text-content-tertiary uppercase tracking-wide mb-1.5 block">
+      <div className="mb-5">
+        <label htmlFor="send-funds-customer" className="text-sm font-medium text-content-primary mb-2 block">
           Customer
         </label>
         {customersLoading ? (
-          <div className="h-9 rounded-lg bg-surface-secondary animate-pulse" />
+          <div className="h-11 rounded-xl bg-surface-secondary animate-pulse" />
         ) : (
           <div className="relative">
             <select
+              id="send-funds-customer"
               value={selectedCustomerId ?? ''}
               onChange={(e) => onSelectCustomer(e.target.value || null)}
-              className="w-full h-9 pl-3 pr-8 text-sm rounded-lg border border-border-primary-main bg-surface-primary text-content-primary appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-action-primary-main transition-colors"
+              className="w-full h-11 pl-3.5 pr-9 text-sm rounded-xl border border-border-primary-main bg-surface-primary text-content-primary appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-action-primary-main transition-colors"
             >
               <option value="">Select a customer…</option>
               {customers.map((c) => (
@@ -451,9 +521,7 @@ function Step2SelectRecipient({
                 </option>
               ))}
             </select>
-            <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-content-tertiary" width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary" width={10} height={10} strokeWidth={1.25} />
           </div>
         )}
       </div>
@@ -461,27 +529,26 @@ function Step2SelectRecipient({
       {/* Recipient list — only shown once a customer is selected */}
       {selectedCustomerId && (
         <div>
-          <label className="text-xs font-medium text-content-tertiary uppercase tracking-wide mb-1.5 block">
+          <label className="text-sm font-medium text-content-primary mb-2 block">
             Recipient
           </label>
 
-          {/* Currency constraint note — shown when source account is known */}
+          {/* Currency constraint note */}
           {selectedAccount && (
-            <p className="text-xs text-content-tertiary mb-2.5">
+            <p className="text-xs text-content-tertiary mb-3">
               Showing {expectedType} only — {sourceCurrency} transfers require a matching recipient type.
             </p>
           )}
 
           {recipientsLoading ? (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-12 rounded-xl border border-border-primary-light animate-pulse bg-surface-secondary" />
+                <div key={i} className="h-14 rounded-xl border border-border-primary-light animate-pulse bg-surface-secondary" />
               ))}
             </div>
           ) : compatibleRecipients.length === 0 ? (
             <div className="rounded-xl border border-border-primary-light px-4 py-6 text-center">
               {recipients.length > 0 ? (
-                // Customer has recipients, but none are compatible with this account's currency
                 <>
                   <p className="text-sm text-content-secondary">
                     No compatible recipients for {sourceCurrency}.
@@ -492,7 +559,6 @@ function Step2SelectRecipient({
                   </p>
                 </>
               ) : (
-                // Customer has no recipients at all
                 <p className="text-sm text-content-tertiary">No active recipients for this customer.</p>
               )}
               <button
@@ -503,7 +569,7 @@ function Step2SelectRecipient({
               </button>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {compatibleRecipients.map((recipient) => {
                 const isSelected = selectedId === recipient.id
                 const subtitle = recipient.type === 'fiat'
@@ -515,25 +581,23 @@ function Step2SelectRecipient({
                     key={recipient.id}
                     onClick={() => onSelect(recipient)}
                     className={[
-                      'w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-colors cursor-pointer',
+                      'w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border text-left transition-colors cursor-pointer',
                       isSelected
                         ? 'border-action-primary-main bg-feedback-information-light'
                         : 'border-border-primary-light hover:border-border-primary-dark hover:bg-surface-secondary',
                     ].join(' ')}
                   >
-                    <div>
-                      <div className="text-sm font-medium text-content-primary">
-                        {recipient.name}
-                      </div>
+                    {/* Radio-style selection indicator */}
+                    <div className={[
+                      'w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors',
+                      isSelected ? 'border-action-primary-main bg-action-primary-main' : 'border-border-primary-dark',
+                    ].join(' ')}>
+                      {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-content-primary">{recipient.name}</div>
                       <div className="text-xs text-content-tertiary mt-0.5">{subtitle}</div>
                     </div>
-                    {isSelected && (
-                      <div className="w-4 h-4 rounded-full bg-action-primary-main flex items-center justify-center shrink-0">
-                        <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                          <path d="M1.5 4l1.8 1.8L6.5 2" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </div>
-                    )}
                   </button>
                 )
               })}
@@ -570,44 +634,45 @@ function Step3EnterAmount({
 }) {
   if (!sourceAccount || !recipient) return null
 
+  const recipientSubtitle = recipient.type === 'fiat'
+    ? `Bank account · ${RAIL_LABELS[recipient.rail] ?? recipient.rail}`
+    : `Crypto · ${CHAIN_LABELS[recipient.chain] ?? recipient.chain}`
+
   return (
     <div>
-      <div className="text-[15px] font-medium text-content-primary mb-1">
-        How much are you sending?
-      </div>
-      <p className="text-sm text-content-tertiary mb-5">
-        Enter the amount to send from this account.
-      </p>
-
-      {/* Source account summary — read-only context card */}
-      <div className="rounded-xl bg-surface-secondary border border-border-primary-light px-4 py-3 mb-5">
-        <div className="text-xs font-medium text-content-tertiary uppercase tracking-wide mb-2">
-          From
-        </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm font-medium text-content-primary">{sourceAccount.label}</div>
-            <div className="text-xs font-mono text-content-tertiary mt-0.5">{sourceAccount.addressShort}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-sm font-semibold text-content-primary tabular-nums">
-              {formatAmount(sourceAccount.balance, sourceAccount.currency)}
-            </div>
-            <div className="text-xs text-content-tertiary">available</div>
-          </div>
-        </div>
+      {/* Source + destination context cards — "ReadOnlyCard" pattern from the reference.
+          Information that's already been decided is shown as a contained bordered row,
+          visually separated from the editable fields below. Users can review what they've
+          set up without it blending into the form. */}
+      <div className="space-y-2.5 mb-6">
+        <ReadOnlyCard
+          label="From"
+          primary={sourceAccount.label}
+          secondary={sourceAccount.addressShort}
+          trailingPrimary={formatAmount(sourceAccount.balance, sourceAccount.currency)}
+          trailingSecondary="available"
+        />
+        <ReadOnlyCard
+          label="To"
+          primary={recipient.name}
+          secondary={recipientSubtitle}
+        />
       </div>
 
       {/* Amount input */}
-      <div className="mb-4">
-        <label className="text-xs font-medium text-content-tertiary uppercase tracking-wide mb-1.5 block">
+      <div className="mb-5">
+        <label htmlFor="send-funds-amount" className="text-sm font-medium text-content-primary mb-2 block">
           Amount ({sourceAccount.currency})
         </label>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-content-tertiary font-medium">
-            {sourceAccount.currency === 'USD' ? '$' : ''}
-          </span>
+          {/* aria-hidden: decorative currency prefix, the label already names the currency */}
+          {sourceAccount.currency === 'USD' && (
+            <span aria-hidden="true" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-content-tertiary font-medium">
+              $
+            </span>
+          )}
           <input
+            id="send-funds-amount"
             type="number"
             min="0"
             step="0.01"
@@ -615,14 +680,14 @@ function Step3EnterAmount({
             onChange={(e) => onAmountChange(e.target.value)}
             placeholder="0.00"
             className={[
-              'w-full h-10 text-sm rounded-lg border border-border-primary-main bg-surface-primary text-content-primary',
+              'w-full h-11 text-sm rounded-xl border border-border-primary-main bg-surface-primary text-content-primary',
               'focus:outline-none focus:ring-1 focus:ring-action-primary-main transition-colors',
               'tabular-nums',
-              sourceAccount.currency === 'USD' ? 'pl-7 pr-3' : 'px-3',
+              sourceAccount.currency === 'USD' ? 'pl-7 pr-3.5' : 'px-3.5',
             ].join(' ')}
           />
           {sourceAccount.currency !== 'USD' && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-content-tertiary font-medium">
+            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-sm text-content-tertiary font-medium">
               {sourceAccount.currency}
             </span>
           )}
@@ -631,11 +696,8 @@ function Step3EnterAmount({
 
       {/* Conversion note — shown when source and destination currencies differ */}
       {currencyMismatch && (
-        <div className="mb-4 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-feedback-information-light border border-feedback-information-border">
-          <svg className="shrink-0 mt-0.5 text-feedback-information-main" width="13" height="13" viewBox="0 0 14 14" fill="none">
-            <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.25"/>
-            <path d="M7 6.5v3M7 4.5v.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round"/>
-          </svg>
+        <div className="mb-5 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-feedback-information-light border border-feedback-information-border">
+          <Info className="shrink-0 mt-0.5 text-feedback-information-main" width={13} height={13} strokeWidth={1.25} />
           <p className="text-xs text-feedback-information-main">
             Funds will be converted automatically from {sourceAccount.currency} to{' '}
             {recipient.type === 'fiat' ? 'USD' : 'USDC'} at the prevailing rate.
@@ -644,11 +706,11 @@ function Step3EnterAmount({
       )}
 
       {/* Rail — pre-populated from recipient, read-only (one rail per recipient in this model) */}
-      <div className="mb-4">
-        <label className="text-xs font-medium text-content-tertiary uppercase tracking-wide mb-1.5 block">
+      <div className="mb-5">
+        <label className="text-sm font-medium text-content-primary mb-2 block">
           Payment rail
         </label>
-        <div className="h-10 px-3 flex items-center text-sm text-content-primary rounded-lg border border-border-primary-light bg-surface-secondary">
+        <div className="h-11 px-3.5 flex items-center text-sm text-content-primary rounded-xl border border-border-primary-light bg-surface-secondary">
           {RAIL_LABELS[formData.rail] ?? formData.rail}
           <span className="ml-2 text-xs text-content-tertiary">(set by recipient)</span>
         </div>
@@ -656,16 +718,17 @@ function Step3EnterAmount({
 
       {/* Merchant reference — optional */}
       <div>
-        <label className="text-xs font-medium text-content-tertiary uppercase tracking-wide mb-1.5 block">
+        <label htmlFor="send-funds-reference" className="text-sm font-medium text-content-primary mb-2 block">
           Merchant reference{' '}
-          <span className="normal-case font-normal text-content-quaternary">(optional)</span>
+          <span className="font-normal text-content-tertiary">(optional)</span>
         </label>
         <input
+          id="send-funds-reference"
           type="text"
           value={formData.merchantReference}
           onChange={(e) => onRefChange(e.target.value)}
           placeholder="e.g. payroll-march-w1"
-          className="w-full h-10 px-3 text-sm rounded-lg border border-border-primary-main bg-surface-primary text-content-primary focus:outline-none focus:ring-1 focus:ring-action-primary-main transition-colors placeholder:text-content-quaternary font-mono"
+          className="w-full h-11 px-3.5 text-sm rounded-xl border border-border-primary-main bg-surface-primary text-content-primary focus:outline-none focus:ring-1 focus:ring-action-primary-main transition-colors placeholder:text-content-quaternary font-mono"
         />
       </div>
     </div>
@@ -708,16 +771,9 @@ function Step4Confirm({ sourceAccount, recipient, customer, formData }) {
 
   return (
     <div>
-      <div className="text-[15px] font-medium text-content-primary mb-1">
-        Review your transfer
-      </div>
-      <p className="text-sm text-content-tertiary mb-5">
-        Confirm the details before sending.
-      </p>
-
       <div className="rounded-xl border border-border-primary-light overflow-hidden divide-y divide-border-primary-light">
         {rows.map(({ label, value, bold, mono }) => (
-          <div key={label} className="flex items-start justify-between px-4 py-3 gap-4">
+          <div key={label} className="flex items-start justify-between px-4 py-3.5 gap-4">
             <span className="text-sm text-content-tertiary shrink-0 min-w-[90px]">{label}</span>
             <span className={[
               'text-sm text-right',
@@ -730,7 +786,7 @@ function Step4Confirm({ sourceAccount, recipient, customer, formData }) {
         ))}
       </div>
 
-      <p className="text-xs text-content-tertiary mt-4">
+      <p className="text-xs text-content-tertiary mt-5">
         By confirming, you authorise this transfer. This action cannot be undone.
       </p>
     </div>
@@ -741,18 +797,10 @@ function Step4Confirm({ sourceAccount, recipient, customer, formData }) {
 
 function SuccessView({ transfer, onClose, navigate }) {
   return (
-    <div className="py-4 text-center">
+    <div className="py-6 text-center">
       {/* Green checkmark */}
       <div className="w-12 h-12 rounded-full bg-feedback-success-light border border-feedback-success-border flex items-center justify-center mx-auto mb-4">
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-          <path
-            d="M5 11.5l4.5 4.5L17 7"
-            stroke="var(--feedback-success-main, #17B04A)"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <Check width={22} height={22} stroke="var(--feedback-success-main, #17B04A)" strokeWidth={2} />
       </div>
 
       <div className="text-[17px] font-semibold text-content-primary mb-2">
@@ -764,7 +812,7 @@ function SuccessView({ transfer, onClose, navigate }) {
         <Badge variant="status" value="pending" />
       </div>
 
-      <p className="text-sm text-content-secondary max-w-xs mx-auto mb-6">
+      <p className="text-sm text-content-secondary max-w-xs mx-auto mb-7">
         You&apos;ll receive a webhook notification when the transfer completes.
       </p>
 

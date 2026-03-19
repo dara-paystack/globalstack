@@ -7,6 +7,7 @@ import { webhookDeliveries } from './fixtures/webhookDeliveries'
 import { apiKey } from './fixtures/apiKey'
 import { auditLog } from './fixtures/auditLog'
 import { recipients } from './fixtures/recipients'
+import { team } from './fixtures/team'
 import { transfers } from './fixtures/transfers'
 import {
   testTransactions,
@@ -416,6 +417,30 @@ export const handlers = [
     transfers.unshift(newTransfer)
 
     return HttpResponse.json(newTransfer, { status: 201 })
+  }),
+
+  // ── Team ──────────────────────────────────────────────────────────────────────
+  //
+  // Returns all team members. No mode separation — team membership is real
+  // operational data, not test data.
+  //
+  // Members are returned in a stable order: active members first (sorted by
+  // joinedAt), then invited (pending acceptance), then suspended last.
+  http.get('/api/team', async () => {
+    await randomDelay()
+
+    const STATUS_ORDER = { active: 0, invited: 1, suspended: 2 }
+    const sorted = [...team].sort((a, b) => {
+      const statusDiff = STATUS_ORDER[a.status] - STATUS_ORDER[b.status]
+      if (statusDiff !== 0) return statusDiff
+      // Within active: sort by joinedAt ascending (longest-serving first)
+      if (a.joinedAt && b.joinedAt) {
+        return new Date(a.joinedAt) - new Date(b.joinedAt)
+      }
+      return 0
+    })
+
+    return HttpResponse.json({ data: sorted, meta: { total: team.length } })
   }),
 
   // ── Audit Log ─────────────────────────────────────────────────────────────────

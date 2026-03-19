@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
+import { usePageTitle } from '../lib/usePageTitle'
 import { Skeleton, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@paystack/pax'
 import { useCustomers } from '../hooks/useCustomers'
 import { usePanelContext } from '../context/PanelContext'
@@ -41,6 +42,7 @@ function fromKycSelect(val) {
 }
 
 export default function Customers() {
+  usePageTitle('Customers')
   const [kycFilter, setKycFilter] = useState('all')
   const { data: customers, loading, error, refetch } = useCustomers({
     kycStatus: fromKycSelect(kycFilter),
@@ -165,8 +167,10 @@ export default function Customers() {
                     <tr
                       key={customer.id}
                       onClick={() => openPanel('customer', customer.id)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel('customer', customer.id) } }}
+                      tabIndex={0}
                       className={[
-                        'cursor-pointer transition-colors',
+                        'cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary-main focus-visible:ring-inset',
                         isSelected ? 'bg-surface-secondary' : 'hover:bg-surface-secondary',
                       ].join(' ')}
                     >

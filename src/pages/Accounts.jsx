@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { usePageTitle } from '../lib/usePageTitle'
 import {
   Skeleton,
   Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext,
@@ -21,6 +22,7 @@ function SortArrow({ direction }) {
 }
 
 export default function Accounts() {
+  usePageTitle('Accounts')
   // ── Banner stats: fetch all accounts once, compute aggregate client-side ──
   // Fetching all ~36 accounts for stats is fine at prototype scale.
   // In production you'd add a /api/accounts/summary endpoint returning
@@ -206,8 +208,10 @@ export default function Accounts() {
                     <tr
                       key={acc.id}
                       onClick={() => openPanel('account', acc.id)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel('account', acc.id) } }}
+                      tabIndex={0}
                       className={[
-                        'cursor-pointer transition-colors',
+                        'cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary-main focus-visible:ring-inset',
                         isSelected ? 'bg-surface-secondary' : 'hover:bg-surface-secondary',
                       ].join(' ')}
                     >
@@ -447,8 +451,10 @@ function CustomerAccountRow({ acc, panelState, panelOpen, onOpen }) {
   return (
     <tr
       onClick={() => onOpen('account', acc.id)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen('account', acc.id) } }}
+      tabIndex={0}
       className={[
-        'cursor-pointer transition-colors',
+        'cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary-main focus-visible:ring-inset',
         isSelected ? 'bg-surface-secondary' : 'hover:bg-surface-secondary',
       ].join(' ')}
     >

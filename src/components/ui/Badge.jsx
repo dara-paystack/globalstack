@@ -47,6 +47,10 @@ const STATUS_COLOR = {
   paused:                 'warning',     // temporarily suspended
   offboarded:             'secondary',   // relationship ended — neutral terminal
 
+  // ── Team member statuses ──────────────────────────────────────────────────
+  invited:   'information', // invitation sent, awaiting acceptance — pending action
+  suspended: 'secondary',  // access revoked — neutral, not an error state
+
   // ── Recipient statuses ────────────────────────────────────────────────────
   archived: 'secondary',   // removed from active use; historical reference only
 

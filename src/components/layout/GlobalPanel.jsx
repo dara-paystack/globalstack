@@ -5,8 +5,8 @@
 
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Skeleton, Tabs, TabsList, TabsTrigger, TabsContent } from '@paystack/pax'
-import { Circle } from 'lucide-react'
+import { Skeleton, Tabs, TabsList, TabsTrigger, TabsContent, Button } from '@paystack/pax'
+import { Circle, X, ArrowUp } from 'lucide-react'
 import { usePanelContext } from '../../context/PanelContext'
 import { useTransaction } from '../../hooks/useTransactions'
 import { useAccount } from '../../hooks/useAccounts'
@@ -52,14 +52,7 @@ function CloseButton({ onClick }) {
       aria-label="Close panel"
       className="p-1.5 rounded-md text-content-tertiary hover:bg-surface-tertiary hover:text-content-primary transition-colors cursor-pointer"
     >
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path
-          d="M12 4L4 12M4 4l8 8"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-      </svg>
+      <X width={16} height={16} strokeWidth={1.5} />
     </button>
   )
 }
@@ -90,7 +83,15 @@ export function GlobalPanel() {
   const isOpen = !!panelState.type
 
   return (
+    // role="complementary" makes this a named landmark — screen reader users navigating
+    // by landmarks (a common pattern) can jump directly to the detail panel.
+    // aria-hidden when closed: the panel has zero width but its DOM content still
+    // exists. aria-hidden prevents screen readers from finding focusable elements
+    // inside the collapsed panel before it's opened.
     <div
+      role="complementary"
+      aria-label="Detail panel"
+      aria-hidden={!isOpen}
       className={[
         'shrink-0 bg-surface-primary border-l border-border-primary-light flex flex-col',
         'transition-all duration-200 ease-out overflow-hidden',
@@ -419,18 +420,15 @@ function AccountDetail({ account }) {
       {/* Send funds — only visible when the account has a positive balance.
           Opens the modal with this account pre-selected (skips step 1). */}
       {account.balance > 0 && (
-        <div>
-          <button
-            onClick={() => setSendFundsOpen(true)}
-            variant="default"
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-action-primary-main text-action-primary-main text-sm font-medium hover:bg-feedback-information-light transition-colors cursor-pointer"
-          >
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path d="M7 12.5v-9M3 7L7 3.5 11 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            Send funds
-          </button>
-        </div>
+        <Button
+          variant="outline"
+          color="secondary"
+          className="w-full cursor-pointer"
+          onClick={() => setSendFundsOpen(true)}
+        >
+          <ArrowUp aria-hidden="true" />
+          Send funds
+        </Button>
       )}
 
       {sendFundsOpen && (

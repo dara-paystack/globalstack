@@ -1,7 +1,34 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, useRouteError, useNavigate } from 'react-router-dom'
 import { ModeProvider } from './context/ModeContext'
 import { PanelProvider } from './context/PanelContext'
 import { AppShell } from './components/layout/AppShell'
+
+// Rendered by React Router when any page throws during render or data loading.
+// useRouteError() gives us the thrown value — could be an Error, a Response, or a string.
+// Keeping this inside App.jsx (not a separate file) since it's app-wiring, not a reusable component.
+function PageError() {
+  const error = useRouteError()
+  const navigate = useNavigate()
+  const message = error instanceof Error ? error.message : String(error?.statusText ?? error ?? 'Unknown error')
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-8">
+      <div className="w-10 h-10 rounded-full bg-feedback-danger-subtle flex items-center justify-center">
+        <span className="text-feedback-danger-main text-lg font-semibold">!</span>
+      </div>
+      <div>
+        <p className="text-sm font-medium text-content-primary mb-1">Something went wrong</p>
+        <p className="text-xs text-content-tertiary font-mono max-w-md break-all">{message}</p>
+      </div>
+      <button
+        onClick={() => navigate('/')}
+        className="text-xs text-content-secondary underline underline-offset-2 cursor-pointer"
+      >
+        Go to Overview
+      </button>
+    </div>
+  )
+}
 import Overview from './pages/Overview'
 import Transactions from './pages/Transactions'
 import Accounts from './pages/Accounts'
@@ -10,6 +37,7 @@ import Customers from './pages/Customers'
 import ApiKey from './pages/ApiKey'
 import Webhooks from './pages/Webhooks'
 import AuditLog from './pages/AuditLog'
+import Team from './pages/Team'
 
 // createBrowserRouter defines the full route tree.
 // AppShell is a layout route (no path) — it renders the sidebar/topbar and
@@ -17,6 +45,7 @@ import AuditLog from './pages/AuditLog'
 const router = createBrowserRouter([
   {
     element: <AppShell />,
+    errorElement: <PageError />,
     children: [
       { path: '/', element: <Overview /> },
       { path: '/transactions', element: <Transactions /> },
@@ -26,6 +55,7 @@ const router = createBrowserRouter([
       { path: '/settings/api-key', element: <ApiKey /> },
       { path: '/settings/webhooks', element: <Webhooks /> },
       { path: '/settings/audit-log', element: <AuditLog /> },
+      { path: '/settings/team', element: <Team /> },
     ],
   },
 ])

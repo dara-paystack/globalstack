@@ -11,6 +11,7 @@
 //   to dismiss, same header/body/footer structure, same token set.
 
 import { useState } from 'react'
+import { X } from 'lucide-react'
 
 const ALL_EVENTS = ['CONVERSION', 'TRANSFER', 'INDEXED_DEPOSIT', 'KYC_UPDATE']
 
@@ -64,9 +65,7 @@ export function AddEndpointModal({ onClose, onSuccess }) {
             className="p-1.5 rounded-md text-content-tertiary hover:bg-surface-secondary hover:text-content-primary transition-colors cursor-pointer"
             aria-label="Close"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
+            <X width={16} height={16} strokeWidth={1.5} />
           </button>
         </div>
 

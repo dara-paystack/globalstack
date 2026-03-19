@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { usePageTitle } from '../lib/usePageTitle'
 import {
   Skeleton,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
@@ -66,6 +67,7 @@ function TableSkeleton() {
 }
 
 export default function Transactions() {
+  usePageTitle('Transactions')
   const [status, setStatus] = useState('all')
   const [type, setType] = useState('all')
 
@@ -225,8 +227,10 @@ export default function Transactions() {
                     <tr
                       key={txn.id}
                       onClick={() => handleRowClick(txn)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleRowClick(txn) } }}
+                      tabIndex={0}
                       className={[
-                        'cursor-pointer transition-colors',
+                        'cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary-main focus-visible:ring-inset',
                         isSelected ? 'bg-surface-secondary' : 'hover:bg-surface-secondary',
                       ].join(' ')}
                     >
