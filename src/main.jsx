@@ -5,14 +5,12 @@ import './index.css'
 import App from './App.jsx'
 
 async function bootstrap() {
-  // Start Mock Service Worker in development.
-  // In production there are no mock handlers — real API calls would flow through.
-  if (import.meta.env.DEV) {
-    const { worker } = await import('./mocks/browser.js')
-    await worker.start({
-      onUnhandledRequest: 'bypass', // don't warn about Vite HMR / asset requests
-    })
-  }
+  // Start Mock Service Worker — runs in all environments since this is a prototype
+  // with no real backend. MSW intercepts all /api/* requests with fixture data.
+  const { worker } = await import('./mocks/browser.js')
+  await worker.start({
+    onUnhandledRequest: 'bypass',
+  })
 
   createRoot(document.getElementById('root')).render(
     <StrictMode>
