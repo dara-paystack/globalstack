@@ -164,7 +164,8 @@ export function Sidebar() {
             isTestMode
               ? 'border-feedback-warning-border bg-feedback-warning-light text-feedback-warning-dark'
               : 'border-border-primary-light bg-surface-secondary text-content-secondary hover:bg-surface-tertiary',
-            showOnMobileAndDesktop('flex'),
+            // Literal strings required — Tailwind purges classes built via template literals
+            isTabletExpanded ? 'flex' : 'flex md:hidden lg:flex',
           ].join(' ')}
         >
           <span
