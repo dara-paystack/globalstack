@@ -84,7 +84,7 @@ function UsageTooltip({ active, payload, label }) {
 }
 
 export default function ApiKey() {
-  usePageTitle('API Key')
+  usePageTitle('API Keys')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -161,7 +161,7 @@ export default function ApiKey() {
 
       {/* ── Page header ───────────────────────────────────────────────────── */}
       <div>
-        <h1 className="text-2xl font-semibold text-content-primary leading-snug">API Key</h1>
+        <h1 className="text-2xl font-semibold text-content-primary leading-snug">API Keys</h1>
         <p className="mt-1 text-sm text-content-tertiary max-w-xl">
           Your secret key for authenticating API requests. Keep this secure
           and never expose it in client-side code.

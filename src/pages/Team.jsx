@@ -17,6 +17,27 @@ import { usePageTitle } from '../lib/usePageTitle'
 
 const CURRENT_USER_NAME = 'Tolu Adeyinka'
 
+// 4-colour avatar palette using Pax primitive CSS variables.
+// Each entry: [background token, text token].
+// Suspended members ignore this and use the greyed-out surface style.
+const AVATAR_PALETTE = [
+  ['--fuschia-100',      '--fuschia-700'],
+  ['--deep-sky-100',     '--deep-sky-700'],
+  ['--burnt-orange-100', '--burnt-orange-700'],
+  ['--forest-green-100', '--forest-green-700'],
+]
+
+// Derives a consistent palette index from the numeric suffix of a member ID.
+// e.g. 'user_003' → 3 → index 3 % 4 = 3
+function avatarStyle(memberId) {
+  const n = parseInt(memberId.replace(/\D/g, ''), 10) || 0
+  const [bg, color] = AVATAR_PALETTE[n % AVATAR_PALETTE.length]
+  return {
+    backgroundColor: `var(${bg})`,
+    color: `var(${color})`,
+  }
+}
+
 const ROLE_LABEL = {
   admin:     'Admin',
   developer: 'Developer',
@@ -31,10 +52,10 @@ const PERMISSIONS = [
   { label: 'Accounts',     admin: true,  developer: true,  finance: true  },
   { label: 'Recipients',   admin: true,  developer: true,  finance: true  },
   { label: 'Customers',    admin: true,  developer: true,  finance: true  },
-  { label: 'API Key',      admin: true,  developer: true,  finance: false },
+  { label: 'API Keys',      admin: true,  developer: true,  finance: false },
   { label: 'Webhooks',     admin: true,  developer: true,  finance: false },
-  { label: 'Request Log',  admin: true,  developer: true,  finance: false },
-  { label: 'Audit Log',    admin: true,  developer: false, finance: false },
+  { label: 'Request Logs',  admin: true,  developer: true,  finance: false },
+  { label: 'Audit Logs',    admin: true,  developer: false, finance: false },
   { label: 'Team',         admin: true,  developer: false, finance: false },
 ]
 
@@ -380,12 +401,13 @@ function MemberRow({ member }) {
     <tr className="border-b border-border-primary-light last:border-0">
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
-          <div className={[
-            'w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0',
-            isSuspended
-              ? 'bg-surface-tertiary text-content-tertiary'
-              : 'bg-action-primary-light text-action-primary-main',
-          ].join(' ')}>
+          <div
+            className={[
+              'w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0',
+              isSuspended ? 'bg-surface-tertiary text-content-tertiary' : '',
+            ].join(' ')}
+            style={isSuspended ? undefined : avatarStyle(member.id)}
+          >
             {member.avatarInitials}
           </div>
           <div className="min-w-0">

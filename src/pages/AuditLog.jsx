@@ -103,7 +103,7 @@ const ACTION_OPTIONS = [
   { label: 'All actions', value: 'all' },
   { label: 'Customer', value: 'customer' },
   { label: 'Webhook', value: 'webhook' },
-  { label: 'API Key', value: 'api_key' },
+  { label: 'API Keys', value: 'api_key' },
   { label: 'Account', value: 'account' },
   { label: 'Login', value: 'login' },
   { label: 'Transfer', value: 'transfer' },
@@ -144,7 +144,7 @@ function ExportBanner({ onDismiss }) {
 // AuditLog page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AuditLog() {
-  usePageTitle('Audit Log')
+  usePageTitle('Audit Logs')
   // 'all' is the Radix sentinel for "no filter selected"
   const [actor, setActor] = useState('all')
   const [actionCategory, setActionCategory] = useState('all')
@@ -278,7 +278,7 @@ export default function AuditLog() {
           production because audit log archives can be large and must be
           delivered through an auditable channel, not a browser download. */}
       <PageHeader
-        title="Audit Log"
+        title="Audit Logs"
         subtitle="A record of all actions taken on your account."
         filters={filters}
         primaryAction={{

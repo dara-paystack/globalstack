@@ -148,7 +148,7 @@ const ENDPOINT_OPTIONS = [
 const LIMIT = 20
 
 export default function RequestLog() {
-  usePageTitle('Request Log')
+  usePageTitle('Request Logs')
   const location = useLocation()
   const { panelState, openPanel } = usePanelContext()
 
@@ -241,7 +241,7 @@ export default function RequestLog() {
 
       {/* ── Page header ──────────────────────────────────────────────── */}
       <PageHeader
-        title="Request Log"
+        title="Request Logs"
         subtitle="All API requests made to GlobalStack using your secret key."
         filters={filters}
       />

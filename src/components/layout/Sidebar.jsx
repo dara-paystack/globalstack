@@ -41,12 +41,12 @@ const NAV_MAIN = [
 
 const NAV_DEVELOPER = [
   { to: '/developer/webhooks', label: 'Webhooks', icon: Webhook },
-  { to: '/developer/request-log', label: 'Request Log', icon: Terminal },
+  { to: '/developer/request-log', label: 'Request Logs', icon: Terminal },
 ]
 
 const NAV_ADMIN = [
-  { to: '/settings/api-key', label: 'API Key', icon: KeyRound },
-  { to: '/settings/audit-log', label: 'Audit Log', icon: ClipboardList },
+  { to: '/settings/api-key', label: 'API Keys', icon: KeyRound },
+  { to: '/settings/audit-log', label: 'Audit Logs', icon: ClipboardList },
   { to: '/settings/team', label: 'Team', icon: UsersRound },
 ]
 
