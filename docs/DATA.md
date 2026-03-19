@@ -16,7 +16,50 @@ All mock data lives in `src/mocks/fixtures/`. These are the single source of tru
 | `apiKey.js` | Single API key record with extended usage metadata (see below) |
 | `auditLog.js` | 47 audit log entries across 30 days, 3 actors (see below) |
 | `team.js` | 6 team members: 3 active, 1 invited, 1 suspended, across admin/developer/finance roles |
+| `requestLog.js` | 61 API request entries spanning 2026-03-13 to 2026-03-19 (see below) |
 | `testFixtures.js` | Sparse test data: 5 txns, 3 accounts (1 merchant + 2 customer), 2 customers |
+
+## Request Log Fixture Schema (requestLog.js)
+
+61 entries spanning 2026-03-13 → 2026-03-19. Anchor date: `REQUEST_LOG_ANCHOR = '2026-03-19'`.
+Not mode-separated: API calls are always real regardless of dashboard test/live mode.
+
+**Status code distribution:** ~85% 2xx, ~7% 400, ~3% 401, ~3% 404, ~2% 500
+**Error cluster:** 2026-03-15, 15:12–15:32 — 4× 400 + 1× 401 (developer testing bad payloads)
+**Today (2026-03-19):** 18 entries — 16 success, 1× 401, 1× 500
+
+```js
+{
+  id: 'req_a1b2c3d4',
+  method: 'POST',                          // 'GET' | 'POST'
+  endpoint: '/fx/v1/conversions',          // parameterised template — for filter dropdown
+  path: '/fx/v1/conversions',              // fully resolved path — displayed in table
+  statusCode: 201,                         // 200 | 201 | 400 | 401 | 404 | 500
+  latencyMs: 143,                          // response time in ms
+  ipAddress: '41.190.3.xxx',               // masked
+  timestamp: '2026-03-19T14:22:15Z',       // ISO 8601
+  requestBody: { ... } | null,             // null for GET requests
+  responseBody: { ... },                   // key fields for success; full body for errors
+  errorMessage: null | 'error description', // null when statusCode < 400
+}
+```
+
+**Linked transactions:** `responseBody.reference` matches a real transaction ID in `transactions.js`
+for 4 POST /fx/v1/conversions entries. The detail panel renders a "Linked Transaction" section.
+
+**Status code groupings for filters:**
+- `2xx` → 200 OK, 201 Created
+- `4xx` → 400 Bad Request, 401 Unauthorized, 404 Not Found
+- `5xx` → 500 Internal Server Error
+
+**Latency thresholds (color only, no badge):**
+- `< 300ms` → `text-content-tertiary` (normal)
+- `300–600ms` → `text-feedback-warning-dark` (slow)
+- `> 600ms` → `text-feedback-danger-main` (very slow)
+
+**MSW handler:** `GET /api/request-log?page&limit&method&statusGroup&dateRange&endpoint`
+Offset-based pagination (not cursor-based — developers navigate page-by-page in logs).
+`GET /api/request-log/:id` for single entry (detail panel).
 
 ## Recipients Fixture Schema (recipients.js)
 
@@ -56,6 +99,26 @@ One is archived (rec_006 — Equity Bank, Wanjiku Holdings) to demonstrate that 
   createdAt: ISO string,
 }
 ```
+
+## Transaction Account ID Fields (transactions.js)
+
+Each transaction has two account ID fields used by the account panel's Recent Activity section
+and the Transactions page's account filter (`?accountId=`):
+
+| Field | Purpose | Which transactions have it |
+|-------|---------|---------------------------|
+| `destinationAccount` | Account that received the funds | All on-ramp conversions, deposits; `acc_01` for merchant treasury deposits |
+| `sourceAccountId` | Account that sourced the funds | All withdrawals and off-ramp conversions |
+
+Transactions where neither field is set (e.g., pure fiat off-ramp steps, test fixtures) are invisible to account-level filtering.
+
+**Account ID mapping (live fixtures):**
+- `acc_01` — Acme Corp treasury (merchant): receives tx_merch01/02/03
+- `acc_c01` — John Adeyemi Primary Wallet: receives on-ramp conversions + deposits; sources withdrawals + off-ramps
+- `acc_c08` — Wanjiku Holdings Primary Wallet: receives KES/GHS/ZAR→USDC conversions; sources USDC→KES/GHS off-ramps
+- `acc_c09` — Wanjiku Operations Wallet: receives tx_rev01tu5 (reversed deposit)
+
+**Convention:** `destinationAccount` (old field, kept for sparkline compatibility); `sourceAccountId` (new field, added Step 29).
 
 ## Transfers Fixture Schema (transfers.js)
 

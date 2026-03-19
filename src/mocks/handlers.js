@@ -9,6 +9,7 @@ import { auditLog } from './fixtures/auditLog'
 import { recipients } from './fixtures/recipients'
 import { team } from './fixtures/team'
 import { transfers } from './fixtures/transfers'
+import { requestLog, REQUEST_LOG_ANCHOR } from './fixtures/requestLog'
 import {
   testTransactions,
   testAccounts,
@@ -40,6 +41,8 @@ export const handlers = [
     const cursor = url.searchParams.get('cursor') ?? ''
     const status = url.searchParams.get('status') ?? ''
     const type = url.searchParams.get('type') ?? ''
+    const accountId = url.searchParams.get('accountId') ?? ''
+    const recipientId = url.searchParams.get('recipientId') ?? ''
     const mode = url.searchParams.get('mode') ?? 'live'
 
     const allTxns = mode === 'test' ? testTransactions : transactions
@@ -52,6 +55,21 @@ export const handlers = [
     }
     if (type) {
       filtered = filtered.filter((t) => t.type === type)
+    }
+    // accountId filter: matches transactions where this account is either source or destination.
+    // Used by the Transactions page when navigated to from an account panel ("View all →").
+    if (accountId) {
+      filtered = filtered.filter(
+        (t) => t.sourceAccountId === accountId || t.destinationAccount === accountId,
+      )
+    }
+    // recipientId filter: joins through the transfers fixture — finds all source accounts
+    // that have sent to this recipient, then returns transactions from those accounts.
+    if (recipientId) {
+      const recipientAccountIds = new Set(
+        transfers.filter((tf) => tf.recipientId === recipientId).map((tf) => tf.sourceAccountId),
+      )
+      filtered = filtered.filter((t) => recipientAccountIds.has(t.sourceAccountId))
     }
 
     // Cursor-based slicing: find the cursor item, then take the next `limit` records.
@@ -72,7 +90,7 @@ export const handlers = [
 
     // When filters are active, report the actual filtered count.
     // When unfiltered in live mode, report the simulated large total (847).
-    const reportedTotal = status || type ? filtered.length : simulatedTotal
+    const reportedTotal = status || type || accountId || recipientId ? filtered.length : simulatedTotal
 
     return HttpResponse.json({
       data: pageData,
@@ -514,5 +532,83 @@ export const handlers = [
       data: pageData,
       meta: { nextCursor, hasNext, hasPrev, limit },
     })
+  }),
+
+  // ── Request Log ───────────────────────────────────────────────────────────────
+  //
+  // Records every inbound API request made using the merchant's secret key.
+  // Not mode-separated — requests happen regardless of which mode the dashboard
+  // is in. The log is always the real record of what the integration called.
+  //
+  // Supports:
+  //   ?page=1&limit=20
+  //   ?method=GET|POST            — filter by HTTP method
+  //   ?statusGroup=2xx|4xx|5xx   — filter by status code group
+  //   ?endpoint=/fx/v1/...       — filter by endpoint template
+  //   ?dateRange=last_24h|last_7|last_30  (defaults to last_7)
+  //
+  // Entries are returned newest-first.
+  http.get('/api/request-log', async ({ request }) => {
+    await randomDelay()
+
+    const url = new URL(request.url)
+    const page = parseInt(url.searchParams.get('page') ?? '1', 10)
+    const limit = parseInt(url.searchParams.get('limit') ?? '20', 10)
+    const method = url.searchParams.get('method') ?? ''
+    const statusGroup = url.searchParams.get('statusGroup') ?? ''
+    const endpoint = url.searchParams.get('endpoint') ?? ''
+    const dateRange = url.searchParams.get('dateRange') ?? 'last_7'
+
+    // Date range cutoff — anchored to fixture's "today" so it doesn't erode
+    const ANCHOR = new Date(REQUEST_LOG_ANCHOR + 'T23:59:59Z').getTime()
+    const RANGE_DAYS = dateRange === 'last_24h' ? 1 : dateRange === 'last_30' ? 30 : 7
+    const cutoff = ANCHOR - RANGE_DAYS * 24 * 60 * 60 * 1000
+
+    let data = [...requestLog].sort(
+      (a, b) => new Date(b.timestamp) - new Date(a.timestamp),
+    )
+
+    // Date range filter
+    data = data.filter((r) => new Date(r.timestamp).getTime() >= cutoff)
+
+    // Method filter
+    if (method) {
+      data = data.filter((r) => r.method === method.toUpperCase())
+    }
+
+    // Status group filter — group 4xx catches 400, 401, 403, 404 etc.
+    if (statusGroup) {
+      if (statusGroup === '2xx') {
+        data = data.filter((r) => r.statusCode >= 200 && r.statusCode < 300)
+      } else if (statusGroup === '4xx') {
+        data = data.filter((r) => r.statusCode >= 400 && r.statusCode < 500)
+      } else if (statusGroup === '5xx') {
+        data = data.filter((r) => r.statusCode >= 500 && r.statusCode < 600)
+      }
+    }
+
+    // Endpoint template filter
+    if (endpoint) {
+      data = data.filter((r) => r.endpoint === endpoint)
+    }
+
+    const total = data.length
+    const totalPages = Math.ceil(total / limit)
+    const start = (page - 1) * limit
+    const pageData = data.slice(start, start + limit)
+
+    return HttpResponse.json({
+      data: pageData,
+      meta: { total, page, limit, totalPages },
+    })
+  }),
+
+  // Single request log entry — used by the detail panel
+  http.get('/api/request-log/:id', async ({ params }) => {
+    await randomDelay()
+
+    const entry = requestLog.find((r) => r.id === params.id)
+    if (!entry) return new HttpResponse(null, { status: 404 })
+    return HttpResponse.json(entry)
   }),
 ]

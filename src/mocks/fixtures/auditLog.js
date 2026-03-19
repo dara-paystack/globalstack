@@ -1,4 +1,6 @@
-// Audit log fixture — 42 entries, last 30 days (today = 2026-03-19)
+// Audit log fixture — 63 entries, last 30 days (today = 2026-03-19)
+// Includes transfer.created events (trf_001–trf_016, selectively) alongside
+// standard operator actions (KYC, webhooks, account creation, logins).
 //
 // Three operators at Acme Corp:
 //   Tolu Adeyinka — Admin       (can do everything)
@@ -461,6 +463,101 @@ export const auditLog = [
     timestamp: '2026-03-05T09:30:28Z',
   },
 
+  // ── Mar 18, 2026 — transfers ──────────────────────────────────────────────────
+  {
+    id: 'aud_051',
+    actor: actors.chisom,
+    action: 'transfer.created',
+    target: { type: 'transfer', id: 'trf_005', label: 'Base Treasury — Wanjiku Holdings' },
+    metadata: { amount: 20000, currency: 'USDC', recipientId: 'rec_007' },
+    ip: actors.chisom.ip,
+    timestamp: '2026-03-18T14:32:00Z',
+  },
+  {
+    id: 'aud_052',
+    actor: actors.chisom,
+    action: 'transfer.created',
+    target: { type: 'transfer', id: 'trf_016', label: 'GCB Bank — Kwame Asante' },
+    metadata: { amount: 4000, currency: 'USDC', recipientId: 'rec_010' },
+    ip: actors.chisom.ip,
+    timestamp: '2026-03-18T08:02:00Z',
+  },
+
+  // ── Mar 16, 2026 ─────────────────────────────────────────────────────────────
+  {
+    id: 'aud_053',
+    actor: actors.chisom,
+    action: 'transfer.created',
+    target: { type: 'transfer', id: 'trf_015', label: 'Standard Bank — Cape Logistics' },
+    metadata: { amount: 1500, currency: 'USDC', recipientId: 'rec_008' },
+    ip: actors.chisom.ip,
+    timestamp: '2026-03-16T10:02:00Z',
+  },
+
+  // ── Mar 15, 2026 ─────────────────────────────────────────────────────────────
+  {
+    id: 'aud_054',
+    actor: actors.chisom,
+    action: 'transfer.created',
+    target: { type: 'transfer', id: 'trf_013', label: 'KCB Bank — Wanjiku Holdings' },
+    metadata: { amount: 75000, currency: 'USDC', recipientId: 'rec_005' },
+    ip: actors.chisom.ip,
+    timestamp: '2026-03-15T11:02:00Z',
+  },
+
+  // ── Mar 14, 2026 ─────────────────────────────────────────────────────────────
+  {
+    id: 'aud_055',
+    actor: actors.tolu,
+    action: 'transfer.created',
+    target: { type: 'transfer', id: 'trf_014', label: 'Ethereum Wallet — John Adeyemi' },
+    metadata: { amount: 4000, currency: 'USDC', recipientId: 'rec_004' },
+    ip: actors.tolu.ip,
+    timestamp: '2026-03-14T16:02:00Z',
+  },
+
+  // ── Mar 12, 2026 ─────────────────────────────────────────────────────────────
+  {
+    id: 'aud_056',
+    actor: actors.chisom,
+    action: 'transfer.created',
+    target: { type: 'transfer', id: 'trf_008', label: 'GCB Bank — Kwame Asante' },
+    metadata: { amount: 6000, currency: 'USDC', recipientId: 'rec_010' },
+    ip: actors.chisom.ip,
+    timestamp: '2026-03-12T10:02:00Z',
+  },
+
+  // ── Mar 10, 2026 ─────────────────────────────────────────────────────────────
+  {
+    id: 'aud_057',
+    actor: actors.tolu,
+    action: 'transfer.created',
+    target: { type: 'transfer', id: 'trf_012', label: 'GTBank — John Adeyemi' },
+    metadata: { amount: 3000, currency: 'USDC', recipientId: 'rec_001' },
+    ip: actors.tolu.ip,
+    timestamp: '2026-03-10T09:17:00Z',
+  },
+  {
+    id: 'aud_058',
+    actor: actors.chisom,
+    action: 'transfer.created',
+    target: { type: 'transfer', id: 'trf_006', label: 'Standard Bank — Cape Logistics' },
+    metadata: { amount: 8500, currency: 'USDC', recipientId: 'rec_008' },
+    ip: actors.chisom.ip,
+    timestamp: '2026-03-10T13:02:00Z',
+  },
+
+  // ── Mar 5, 2026 ──────────────────────────────────────────────────────────────
+  {
+    id: 'aud_059',
+    actor: actors.tolu,
+    action: 'transfer.created',
+    target: { type: 'transfer', id: 'trf_007', label: 'Ethereum Cold Wallet — Cape Logistics' },
+    metadata: { amount: 1200, currency: 'USDC', recipientId: 'rec_009' },
+    ip: actors.tolu.ip,
+    timestamp: '2026-03-05T09:32:00Z',
+  },
+
   // ── Feb 28, 2026 ─────────────────────────────────────────────────────────────
   {
     id: 'aud_045',
@@ -488,6 +585,47 @@ export const auditLog = [
     metadata: { email: 'kwame.asante@acra.com.gh', country: 'GH' },
     ip: actors.tolu.ip,
     timestamp: '2026-02-28T09:00:44Z',
+  },
+  // ── Feb 25, 2026 ─────────────────────────────────────────────────────────────
+  {
+    id: 'aud_060',
+    actor: actors.tolu,
+    action: 'transfer.created',
+    target: { type: 'transfer', id: 'trf_003', label: 'Solana Treasury — John Adeyemi' },
+    metadata: { amount: 1500, currency: 'USDC', recipientId: 'rec_003' },
+    ip: actors.tolu.ip,
+    timestamp: '2026-02-25T14:01:00Z',
+  },
+
+  // ── Feb 20, 2026 ─────────────────────────────────────────────────────────────
+  {
+    id: 'aud_061',
+    actor: actors.chisom,
+    action: 'transfer.created',
+    target: { type: 'transfer', id: 'trf_004', label: 'KCB Bank — Wanjiku Holdings' },
+    metadata: { amount: 50000, currency: 'USDC', recipientId: 'rec_005' },
+    ip: actors.chisom.ip,
+    timestamp: '2026-02-20T08:02:00Z',
+  },
+
+  // ── Feb 18, 2026 ─────────────────────────────────────────────────────────────
+  {
+    id: 'aud_062',
+    actor: actors.chisom,
+    action: 'transfer.created',
+    target: { type: 'transfer', id: 'trf_001', label: 'GTBank — John Adeyemi' },
+    metadata: { amount: 5000, currency: 'USDC', recipientId: 'rec_001' },
+    ip: actors.chisom.ip,
+    timestamp: '2026-02-18T10:32:00Z',
+  },
+  {
+    id: 'aud_063',
+    actor: actors.chisom,
+    action: 'transfer.created',
+    target: { type: 'transfer', id: 'trf_002', label: 'Zenith Bank — John Adeyemi' },
+    metadata: { amount: 2500, currency: 'USDC', recipientId: 'rec_002' },
+    ip: actors.chisom.ip,
+    timestamp: '2026-02-18T10:37:00Z',
   },
 ]
 

@@ -4,7 +4,7 @@
 
 ```
 src/
-  App.jsx               Router + ModeProvider + PanelProvider root
+  App.jsx               Router + PanelProvider + ModeProvider + SearchProvider root
   main.jsx              MSW bootstrap → createRoot
   index.css             Tailwind v4 + Pax theme import
 
@@ -20,6 +20,9 @@ src/
       CopyButton.jsx    Clipboard with tick confirmation
       EmptyState.jsx    No-results state with optional clear action
       ErrorState.jsx    Fetch failure state with retry
+      GlobalSearch.jsx  cmd+k overlay + floating pill (z-[60], above GlobalPanel)
+      PageHeader.jsx    Universal page header: title, subtitle, Filter button + panel,
+                        active filter pills, primary/secondary action buttons
       Sparkline.jsx     Recharts AreaChart wrapper
       StatCard.jsx      Overview balance cards with skeleton
       Timeline.jsx      Transaction detail vertical stepper
@@ -31,13 +34,17 @@ src/
     Recipients.jsx      Table (name/customer/destination/rail/status/created); calls openPanel('recipient', id)
     Customers.jsx       Table; calls openPanel('customer', id)
     ApiKey.jsx          Masked key display
-    Webhooks.jsx        Endpoint list + inline add form
+    Webhooks.jsx        Endpoint list + inline add form  ← now at /developer/webhooks
+    AuditLog.jsx        Compliance record of dashboard actions
+    Team.jsx            Team members + permissions reference
+    RequestLog.jsx      API request log — developer debugging surface
 
   components/ui/
     SendFundsModal.jsx  4-step transfer initiation modal (see below)
 
   context/
     ModeContext.jsx     Global Test/Live state; useMode() hook
+    SearchContext.jsx   Global search open/close + recent items (session-only); useSearch() hook
     PanelContext.jsx    Global panel state; usePanelContext() → { panelState, openPanel, closePanel }
 
   hooks/
@@ -46,9 +53,13 @@ src/
     useCustomers.js     useCustomers (list) + useCustomer(id) (single record)
     useRecipients.js    useRecipients({ customerId, type, status, page, limit }) + useRecipient(id)
     useTransfers.js     useTransfers({ customerId, status, page, limit }) + useTransfer(id)
+    useRequestLog.js    useRequestLog({ page, limit, method, statusGroup, endpoint, dateRange })
+                        + useRequestLogEntry(id)
 
   lib/
     format.js           All formatting (currency, dates, relative time)
+    alerts.js           buildAlertItems(navigate) + groupAlertItems(items) — shared between
+                        Overview card and NeedsAttentionPanel in GlobalPanel
 
   mocks/
     fixtures/           Raw data arrays
@@ -62,13 +73,24 @@ Uses `createBrowserRouter` (HTML5 History API). AppShell is a layout route
 (no path) that renders the shell and an `<Outlet />` for the active child.
 
 ```
-/                   → Overview
-/transactions       → Transactions
-/accounts           → Accounts
-/recipients         → Recipients
-/customers          → Customers
-/settings/api-key   → ApiKey
-/settings/webhooks  → Webhooks
+BUSINESS
+/                     → Overview
+/transactions         → Transactions
+/accounts             → Accounts
+/recipients           → Recipients
+/customers            → Customers
+
+DEVELOPER
+/developer/webhooks   → Webhooks
+/developer/request-log → RequestLog
+
+ADMIN
+/settings/api-key     → ApiKey
+/settings/audit-log   → AuditLog
+/settings/team        → Team
+
+REDIRECTS (backwards-compatibility)
+/settings/webhooks    → Navigate replace → /developer/webhooks
 ```
 
 ## Data Flow
@@ -86,6 +108,26 @@ Uses `createBrowserRouter` (HTML5 History API). AppShell is a layout route
 - **Global:** ModeContext (Test/Live mode), PanelContext (open panel + selected ID)
 - **Page-level:** useState for filters, pagination only (selectedId moved to PanelContext)
 - **Server state:** Custom hooks (no React Query — overkill for a prototype)
+
+## PageHeader
+
+`src/components/ui/PageHeader.jsx` — universal page header used on all pages except Overview and Accounts.
+
+**Props:** `title`, `subtitle?`, `filters?`, `primaryAction?`, `secondaryAction?`
+
+**FilterPanel sub-component** (inline in PageHeader.jsx):
+- Absolutely positioned 260px dropdown, right-aligned below the Filter button
+- Deferred application: selections are held in local `pendingValues` state and only committed on "Apply". This prevents intermediate table states when building multi-filter queries.
+- Click-outside closes the panel. Skips `[data-radix-popper-content-wrapper]` to handle Radix Select portals correctly — without this, selecting an option inside the panel would close it before the value committed.
+- Active count badge computed at render time: `filters.filter(f => f.value !== f.defaultValue).length`
+
+**Active filter pills** (below subtitle, above table):
+- Rendered from applied values, not pending state
+- Each pill's × removes that filter immediately (no Apply needed — single removals are unambiguous)
+- Styled with `bg-action-primary-light` + `text-action-primary-main`
+
+**Pages exempt:** Overview (unique layout), Accounts (section-level toggles, not page-level)
+**Pages with no Filter button:** Webhooks, Team, ApiKey (pass no `filters` prop)
 
 ## SendFundsModal
 

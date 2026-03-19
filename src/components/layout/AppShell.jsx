@@ -1,44 +1,84 @@
+// AppShell — layout root. Sidebar + content area + GlobalPanel.
+//
+// RESPONSIVE LAYOUT MODEL:
+//
+// Desktop (lg: 1024px+):
+//   Sidebar fixed 224px left, always visible.
+//   Content area: ml-56 (224px offset). GlobalPanel pushes from right (420px).
+//
+// Tablet (md: 768px–1023px):
+//   Sidebar fixed 56px left (icon-only rail), always visible.
+//   Content area: md:ml-14 (56px offset). GlobalPanel pushes from right (380px).
+//   Sidebar can expand to 224px via toggle — it overlays content (no push).
+//   isTabletExpanded backdrop covers content; clicking it collapses the sidebar.
+//
+// Mobile (< md):
+//   Sidebar hidden by default (translateX(-100%)).
+//   MobileTopBar (48px) appears at top of content area.
+//   Hamburger in MobileTopBar slides sidebar in (translateX(0)).
+//   Content area gets margin-left: 280px when sidebar opens (same push mechanism
+//   as the detail panel — both siblings shift via the same flex/margin system).
+//   A semi-transparent backdrop appears at z-20 (below sidebar z-30, above content).
+//
+// MUTUAL EXCLUSION (mobile only):
+//   openPanel() → closeMobileSidebar() (via useEffect on panelState).
+//   openMobileSidebar() → closePanel() (called directly in Sidebar).
+//   Reason: on mobile, the detail panel is 100vw — it occupies the entire screen.
+//   If the sidebar were also open, the content would be displaced 280px + 100vw,
+//   creating an incoherent layout. Two full-screen interactions can't coexist.
+//
+// PANEL PUSH MECHANISM:
+//   GlobalPanel is a flex sibling of <main>. When its width changes (0 → 380/420px),
+//   <main> physically reflows narrower. This is why overflow-hidden is on the flex
+//   container: it clips the panel's content during animation, not the panel boundary.
+//
+// MOBILE SIDEBAR PUSH:
+//   The content wrapper uses margin-left to push right when sidebar is open.
+//   This is different from the panel push (which uses width). Why?
+//   The panel is a flex sibling — widths are the natural flex unit.
+//   The content wrapper is the flex CONTAINER — margin is the natural offset unit
+//   for a fixed-width sibling (the sidebar) outside the flex context.
+//   Both animate at 220ms ease-out so they move together.
+
 import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import { Alert, AlertDescription, AlertWarningIcon } from '@paystack/pax'
 import { Sidebar } from './Sidebar'
 import { GlobalPanel } from './GlobalPanel'
+import { GlobalSearch } from '../ui/GlobalSearch'
+import { MobileTopBar } from './MobileTopBar'
 import { usePanelContext } from '../../context/PanelContext'
 import { useMode } from '../../context/ModeContext'
+import { useSidebar } from '../../context/SidebarContext'
 
-// AppShell is the layout route wrapper.
-// It renders Sidebar once, then a flex row with:
-//   - <main> (flex-1, scrollable) — fills available width
-//   - <GlobalPanel> — fixed 420px, animates in from right
-//
-// The flex row is what enables the push layout: GlobalPanel is a real flex
-// sibling of <main>, so when it opens, <main> physically reflows narrower.
-// No overlay, no backdrop — the table and all page content stay visible.
-//
-// Route changes close the panel via useEffect on location.pathname.
-//
-// The TopBar has been removed. The Live/Test mode indicator now lives in the
-// Sidebar header row alongside the wordmark. The test mode amber banner renders
-// at the top of <main> — inside the content area where it belongs contextually,
-// not as chrome above it.
 export function AppShell() {
-  const { closePanel } = usePanelContext()
+  const { closePanel, panelState } = usePanelContext()
+  const { isMobileOpen, isTabletExpanded, closeMobileSidebar, closeTabletExpanded } = useSidebar()
   const location = useLocation()
   const { isTestMode } = useMode()
 
-  // Close the panel when the user navigates to a different page.
-  // Dependency array intentionally excludes closePanel (stable ref from useState setter).
+  // Close detail panel on route change.
   useEffect(() => {
     closePanel()
   }, [location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Close mobile sidebar on route change (navigating away should restore layout).
+  useEffect(() => {
+    closeMobileSidebar()
+    closeTabletExpanded()
+  }, [location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Mutual exclusion (mobile): close sidebar when detail panel opens.
+  // This fires whenever the panel type+id changes to a non-null state.
+  useEffect(() => {
+    if (panelState.type && panelState.id) {
+      closeMobileSidebar()
+    }
+  }, [panelState.type, panelState.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="min-h-screen bg-surface-secondary">
-      {/* Skip navigation link — WCAG 2.4.1 Bypass Blocks (Level A).
-          Visually hidden until focused so it doesn't clutter the layout for
-          sighted users. When a keyboard user presses Tab as their first action,
-          this link receives focus and they can press Enter to skip the 8-link
-          sidebar and land directly in <main>.
-          focus:not-sr-only + focus:clip-auto restores visibility on focus. */}
+      {/* Skip navigation — WCAG 2.4.1 Bypass Blocks (Level A). */}
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-action-primary-main focus:text-content-inverse focus:rounded-lg focus:text-sm focus:font-medium focus:shadow-lg"
@@ -46,25 +86,77 @@ export function AppShell() {
         Skip to main content
       </a>
 
+      {/* Sidebar — fixed, z-30 (above backdrops at z-20) */}
       <Sidebar />
-      {/* overflow-hidden clips the panel during its width animation. */}
-      <div className="ml-56 flex h-screen overflow-hidden bg-surface-primary">
-        {/* id="main-content" is the skip link target */}
-        <main id="main-content" className="flex-1 min-w-0 overflow-y-auto">
-          {/* Test mode banner — full-width at the top of the content area.
-              Renders before the padded content block so it spans edge-to-edge. */}
-          {isTestMode && (
-            <div className="bg-feedback-warning-light border-b border-feedback-warning-border px-8 py-2 text-sm text-feedback-warning-dark">
-              You&apos;re viewing test data. No real transactions will be affected.
+
+      {/* Mobile backdrop — visible only on mobile when sidebar is open.
+          z-20 puts it above content (z-0) but below sidebar (z-30).
+          Clicking closes the sidebar and returns content to its resting position. */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-black/30 md:hidden"
+          onClick={closeMobileSidebar}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Tablet expanded backdrop — visible only on tablet when sidebar is expanded.
+          Tablet sidebar expansion is overlay (no push), so this prevents
+          interaction with the content behind the expanded sidebar. */}
+      {isTabletExpanded && (
+        <div
+          className="fixed inset-0 z-20 bg-black/30 hidden md:block lg:hidden"
+          onClick={closeTabletExpanded}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* GlobalSearch renders its own fixed-position overlay + floating pill.
+          z-[60] puts it above GlobalPanel and all backdrops. */}
+      <GlobalSearch />
+
+      {/* Content area wrapper.
+          Mobile: ml-0 resting, ml-[280px] when sidebar open (push).
+          Tablet: md:ml-14 (56px icon sidebar).
+          Desktop: lg:ml-56 (224px full sidebar).
+          transition-[margin-left] animates the sidebar push at the same
+          speed as the sidebar translateX (220ms ease-out). */}
+      <div
+        className={[
+          isMobileOpen ? 'ml-[280px]' : 'ml-0',
+          'md:ml-14 lg:ml-56',
+          'flex flex-col h-screen overflow-hidden bg-surface-primary',
+          'transition-[margin-left] duration-[220ms] ease-out',
+        ].join(' ')}
+      >
+        {/* Mobile top bar — hamburger + wordmark + search icon.
+            Only visible on mobile (md:hidden inside MobileTopBar). */}
+        <MobileTopBar />
+
+        {/* Main content row — flex siblings so GlobalPanel pushes <main>. */}
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          <main id="main-content" className="flex-1 min-w-0 overflow-y-auto">
+            {/* Test mode banner — edge-to-edge, before the padded content block. */}
+            {isTestMode && (
+              <Alert severity="warning" variant="filled" className="rounded-none border-x-0 border-t-0">
+                <AlertWarningIcon />
+                <AlertDescription>
+                  You&apos;re viewing test data. No real transactions will be affected.
+                </AlertDescription>
+              </Alert>
+            )}
+            {/* Content padding:
+                Mobile:  p-4  (16px) — tight, full viewport width in use
+                Tablet:  p-6  (24px) — more breathing room
+                Desktop: p-16 (64px) — generous, matches original design */}
+            <div className="p-4 md:p-6 lg:p-16">
+              <div className="max-w-[1200px] mx-auto">
+                <Outlet />
+              </div>
             </div>
-          )}
-          <div className="p-16">
-            <div className="max-w-[1200px] mx-auto">
-              <Outlet />
-            </div>
-          </div>
-        </main>
-        <GlobalPanel />
+          </main>
+          <GlobalPanel />
+        </div>
       </div>
     </div>
   )

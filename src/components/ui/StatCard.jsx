@@ -2,7 +2,7 @@
 // Pax's Skeleton component is used for the loading state.
 import { Skeleton } from '@paystack/pax'
 
-export function StatCard({ label, value, subvalue, trend, loading, children }) {
+export function StatCard({ label, value, subvalue, trend, valueClass, loading, children }) {
   if (loading) {
     return (
       <div className="bg-surface-primary border border-border-primary-light rounded-xl p-5">
@@ -17,10 +17,10 @@ export function StatCard({ label, value, subvalue, trend, loading, children }) {
 
   return (
     <div className="bg-surface-primary border border-border-primary-light rounded-xl p-5">
-      <div className="text-xs font-medium text-content-tertiary uppercase tracking-wide mb-3">
+      <div className="text-xs font-medium text-content-tertiary mb-2">
         {label}
       </div>
-      <div className="text-2xl font-semibold text-content-primary tabular-nums">{value}</div>
+      <div className={['text-2xl font-semibold tabular-nums', valueClass ?? 'text-content-primary'].join(' ')}>{value}</div>
       {subvalue && (
         <div className="text-sm text-content-tertiary mt-0.5">{subvalue}</div>
       )}

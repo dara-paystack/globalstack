@@ -1,13 +1,16 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
+import { X } from 'lucide-react'
 import { usePageTitle } from '../lib/usePageTitle'
 import {
   Skeleton,
-  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
   Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext,
 } from '@paystack/pax'
 import { useTransactions } from '../hooks/useTransactions'
 import { usePanelContext } from '../context/PanelContext'
+import { useSearch } from '../context/SearchContext'
 import { Badge } from '../components/ui/Badge'
+import { PageHeader } from '../components/ui/PageHeader'
 import { EmptyState } from '../components/ui/EmptyState'
 import { ErrorState } from '../components/ui/ErrorState'
 import { formatAmount, formatDatetime } from '../lib/format'
@@ -78,8 +81,25 @@ export default function Transactions() {
   const [cursorIndex, setCursorIndex] = useState(0)
 
   const { panelState, openPanel } = usePanelContext()
-  const panelOpen = panelState.type === 'transaction'
+  const { addRecentItem } = useSearch()
+  const location = useLocation()
 
+  // Pre-open a specific transaction's detail panel when navigating here from
+  // the "Needs attention" section on Overview (or any other deep-link context).
+  useEffect(() => {
+    const id = location.state?.openTransactionId
+    if (id) openPanel('transaction', id)
+  }, [location.state?.openTransactionId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Account filter: set when arriving from an account panel "View all →" link.
+  const [accountId, setAccountId] = useState(location.state?.filterAccountId ?? '')
+
+  // Recipient filter: set when arriving from a recipient panel "View all →" link.
+  // Carries a display label through router state so the pill shows the recipient name.
+  const [recipientId, setRecipientId] = useState(location.state?.filterRecipientId ?? '')
+  const [recipientLabel, setRecipientLabel] = useState(location.state?.filterRecipientLabel ?? '')
+
+  const panelOpen = panelState.type === 'transaction'
   const currentCursor = cursors[cursorIndex]
 
   const { data: txns, meta, loading, error, refetch } = useTransactions({
@@ -87,18 +107,33 @@ export default function Transactions() {
     limit: PAGE_SIZE,
     status: fromSelect(status),
     type: fromSelect(type),
+    accountId,
+    recipientId,
   })
 
-  // Changing a filter resets to the first page by clearing the cursor history.
-  const handleFilterChange = useCallback((setter) => (value) => {
-    setter(value)
+  // Filter change helpers — wrap each setter to also reset the cursor stack.
+  // Passed as onChange to PageHeader filters so pagination resets on apply.
+  const applyStatus = useCallback((val) => {
+    setStatus(val)
     setCursors([null])
     setCursorIndex(0)
   }, [])
 
-  function clearFilters() {
-    setStatus('all')
-    setType('all')
+  const applyType = useCallback((val) => {
+    setType(val)
+    setCursors([null])
+    setCursorIndex(0)
+  }, [])
+
+  function clearAccountId() {
+    setAccountId('')
+    setCursors([null])
+    setCursorIndex(0)
+  }
+
+  function clearRecipientId() {
+    setRecipientId('')
+    setRecipientLabel('')
     setCursors([null])
     setCursorIndex(0)
   }
@@ -121,57 +156,69 @@ export default function Transactions() {
 
   function handleRowClick(txn) {
     openPanel('transaction', txn.id)
+    addRecentItem('transaction', txn.id)
   }
 
-  const filtersActive = fromSelect(status) !== '' || fromSelect(type) !== ''
+  const filtersActive = fromSelect(status) !== '' || fromSelect(type) !== '' || accountId !== '' || recipientId !== ''
+
+  // Filter definitions for PageHeader. The onChange callbacks wrap the setters
+  // with cursor resets so filtering always returns to page 1.
+  const filters = [
+    {
+      id: 'status',
+      label: 'Status',
+      options: STATUS_OPTIONS,
+      value: status,
+      defaultValue: 'all',
+      onChange: applyStatus,
+    },
+    {
+      id: 'type',
+      label: 'Type',
+      options: TYPE_OPTIONS,
+      value: type,
+      defaultValue: 'all',
+      onChange: applyType,
+    },
+  ]
 
   return (
-    <div className="space-y-4">
-      {/* Page header — title left, filters right.
-          Filters live here (outside the card) so SelectContent portals freely
-          above everything without hitting the card's overflow-hidden stacking context. */}
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-content-primary leading-snug">Transactions</h1>
-        <div className="flex items-center gap-2">
-          <Select value={status} onValueChange={handleFilterChange(setStatus)}>
-            <SelectTrigger className="w-40 text-sm">
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_OPTIONS.map((opt) =>
-                opt.group === 'separator' ? (
-                  // Group label — not a selectable item. Styled as muted uppercase text.
-                  <div key={opt.value} className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-content-quaternary select-none">
-                    {opt.label.replace(/─/g, '').trim()}
-                  </div>
-                ) : (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                )
-              )}
-            </SelectContent>
-          </Select>
+    <div className="space-y-8">
+      {/* Page header — universal pattern. No action button on Transactions.
+          Filters live outside the card so SelectContent portals freely above
+          everything without hitting the card's overflow-hidden stacking context. */}
+      <PageHeader title="Transactions" subtitle="All activity across your merchant and customer accounts." filters={filters} />
 
-          <Select value={type} onValueChange={handleFilterChange(setType)}>
-            <SelectTrigger className="w-36 text-sm">
-              <SelectValue placeholder="All types" />
-            </SelectTrigger>
-            <SelectContent>
-              {TYPE_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {filtersActive && (
-            <button
-              onClick={clearFilters}
-              className="text-sm text-action-primary-main hover:text-action-primary-dark font-medium cursor-pointer"
-            >
-              Clear
-            </button>
+      {/* Context pills — shown when navigating from an account or recipient panel
+          "View all →" link. Set by router state, not the filter panel dropdown. */}
+      {(accountId || recipientId) && (
+        <div className="flex items-center gap-1.5">
+          {accountId && (
+            <div className="flex items-center gap-1 pl-2.5 pr-1.5 py-1 text-xs font-medium rounded-full bg-surface-secondary border border-border-primary-light text-content-secondary">
+              <span>Account: {accountId}</span>
+              <button
+                onClick={clearAccountId}
+                className="ml-0.5 text-content-tertiary hover:text-content-primary cursor-pointer leading-none"
+                aria-label="Remove account filter"
+              >
+                <X width={11} height={11} strokeWidth={2.5} />
+              </button>
+            </div>
+          )}
+          {recipientId && (
+            <div className="flex items-center gap-1 pl-2.5 pr-1.5 py-1 text-xs font-medium rounded-full bg-surface-secondary border border-border-primary-light text-content-secondary">
+              <span>Recipient: {recipientLabel || recipientId}</span>
+              <button
+                onClick={clearRecipientId}
+                className="ml-0.5 text-content-tertiary hover:text-content-primary cursor-pointer leading-none"
+                aria-label="Remove recipient filter"
+              >
+                <X width={11} height={11} strokeWidth={2.5} />
+              </button>
+            </div>
           )}
         </div>
-      </div>
+      )}
 
       {/* Card: table only — no filter bar inside */}
       <div className="bg-surface-primary border border-border-primary-light rounded-xl overflow-hidden">
@@ -188,34 +235,39 @@ export default function Transactions() {
                   ? 'No transactions match your current filters.'
                   : 'Transactions will appear here once you have activity.'
               }
-              action={filtersActive ? { label: 'Clear filters', onClick: clearFilters } : undefined}
+              action={filtersActive ? {
+                label: 'Clear filters',
+                onClick: () => { applyStatus('all'); applyType('all'); clearAccountId(); clearRecipientId() }
+              } : undefined}
             />
           ) : (
             <table className="w-full">
+              {/* Mobile columns visible: Type, Amount, Status.
+                  Reference, Source, Destination, Date hidden on mobile — recoverable in panel. */}
               <thead>
                 <tr className="border-b border-border-primary-light bg-surface-secondary">
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary hidden md:table-cell">
                     Reference
                   </th>
                   <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
                     Type
                   </th>
-                  {/* Source column hidden when panel is open — recoverable in panel */}
+                  {/* Source: hidden on mobile AND when panel open */}
                   {!panelOpen && (
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary hidden md:table-cell">
                       Source
                     </th>
                   )}
                   <th className="px-4 py-2.5 text-right text-xs font-medium text-content-tertiary">
                     Amount
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary hidden md:table-cell">
                     Destination
                   </th>
                   <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
                     Status
                   </th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium text-content-tertiary">
+                  <th className="px-4 py-2.5 text-right text-xs font-medium text-content-tertiary hidden md:table-cell">
                     Date
                   </th>
                 </tr>
@@ -234,7 +286,7 @@ export default function Transactions() {
                         isSelected ? 'bg-surface-secondary' : 'hover:bg-surface-secondary',
                       ].join(' ')}
                     >
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 hidden md:table-cell">
                         <span className="text-xs font-mono text-content-secondary">{txn.id}</span>
                       </td>
                       <td className="px-4 py-3">
@@ -244,7 +296,7 @@ export default function Transactions() {
                         </div>
                       </td>
                       {!panelOpen && (
-                        <td className="px-4 py-3 text-sm text-content-secondary">
+                        <td className="px-4 py-3 text-sm text-content-secondary hidden md:table-cell">
                           {txn.sourceMethod}
                         </td>
                       )}
@@ -256,13 +308,13 @@ export default function Transactions() {
                           {formatAmount(txn.sourceAmount, txn.sourceCurrency)}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-content-secondary max-w-[180px] truncate">
+                      <td className="px-4 py-3 text-sm text-content-secondary max-w-[180px] truncate hidden md:table-cell">
                         {txn.destination}
                       </td>
                       <td className="px-4 py-3">
                         <Badge variant="status" value={txn.status} />
                       </td>
-                      <td className="px-4 py-3 text-sm text-content-tertiary text-right whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm text-content-tertiary text-right whitespace-nowrap hidden md:table-cell">
                         {formatDatetime(txn.createdAt)}
                       </td>
                     </tr>

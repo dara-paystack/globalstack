@@ -1,16 +1,127 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { usePageTitle } from '../lib/usePageTitle'
 import {
-  Skeleton,
+  Skeleton, Button,
   Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext,
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@paystack/pax'
+import { Filter, X } from 'lucide-react'
 import { useAccounts, useCustomerAccounts } from '../hooks/useAccounts'
 import { usePanelContext } from '../context/PanelContext'
+import { useSearch } from '../context/SearchContext'
 import { Badge } from '../components/ui/Badge'
 import { ErrorState } from '../components/ui/ErrorState'
 import { EmptyState } from '../components/ui/EmptyState'
 import { formatUSDC, formatAmount } from '../lib/format'
+
+// ─── SectionFilter — Filter button + panel for the Customer Accounts section ──
+//
+// Same visual pattern as PageHeader's filter button, scoped to the section.
+// Single filter (Type: All / On-chain / Fiat) with deferred Apply.
+// Inline rather than reusing PageHeader because this is a section-level control,
+// not a page-level header — it renders inside the page body, not as the heading.
+//
+// The Radix click-outside fix applies here too: skip [data-radix-popper-content-wrapper]
+// so clicking a Select option inside the panel doesn't close it prematurely.
+// toSentinel / fromSentinel: Radix forbids value="" on SelectItem (reserved for
+// "no selection"). Internally the panel uses 'all' as the "no filter" sentinel,
+// identical to the pattern in Transactions, Customers, Recipients, etc.
+function toSentinel(val) { return val === '' ? 'all' : val }
+function fromSentinel(val) { return val === 'all' ? '' : val }
+
+function SectionFilter({ typeFilter, onApply }) {
+  const [open, setOpen] = useState(false)
+  const [pending, setPending] = useState(toSentinel(typeFilter))
+  const ref = useRef(null)
+
+  const isActive = typeFilter !== ''
+
+  function openPanel() {
+    setPending(toSentinel(typeFilter))
+    setOpen(true)
+  }
+
+  function handleApply() {
+    onApply(fromSentinel(pending))
+    setOpen(false)
+  }
+
+  function handleClearAll() {
+    setPending('all')
+  }
+
+  useEffect(() => {
+    if (!open) return
+    function handleMouseDown(e) {
+      if (!ref.current) return
+      if (ref.current.contains(e.target)) return
+      if (e.target.closest('[data-radix-popper-content-wrapper]')) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', handleMouseDown)
+    return () => document.removeEventListener('mousedown', handleMouseDown)
+  }, [open])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={open ? () => setOpen(false) : openPanel}
+        aria-haspopup="true"
+        aria-expanded={open}
+        className={[
+          'flex items-center gap-1.5 h-9 px-3 rounded-lg border text-sm font-medium transition-colors cursor-pointer',
+          isActive
+            ? 'border-action-primary-main bg-action-primary-light text-action-primary-main'
+            : 'border-border-primary-main bg-surface-primary text-content-secondary hover:bg-surface-secondary hover:text-content-primary',
+        ].join(' ')}
+      >
+        <Filter width={14} height={14} strokeWidth={2} />
+        Filter
+        {isActive && (
+          <span className="ml-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-action-primary-main text-content-inverse text-xs font-semibold px-1 leading-none">
+            1
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div
+          className="absolute right-0 top-full mt-1.5 w-[220px] bg-surface-primary border border-border-primary-light rounded-xl z-50"
+          style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.10)' }}
+        >
+          <div className="px-4 py-3 border-b border-border-primary-light">
+            <span className="text-sm font-medium text-content-primary">Filters</span>
+          </div>
+          <div className="px-4 py-3">
+            <label className="block text-xs font-medium text-content-tertiary mb-1.5">Type</label>
+            <Select value={pending} onValueChange={setPending}>
+              <SelectTrigger className="w-full text-sm cursor-pointer">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                <SelectItem value="on-chain">On-chain</SelectItem>
+                <SelectItem value="fiat">Fiat</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border-primary-light">
+            <button
+              onClick={handleClearAll}
+              className="text-sm text-action-primary-main hover:text-action-primary-dark font-medium cursor-pointer"
+            >
+              Clear all
+            </button>
+            <Button variant="default" color="primary" size="sm" onClick={handleApply} className="cursor-pointer">
+              Apply
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ─── Sort indicator arrow ─────────────────────────────────────────────────────
 function SortArrow({ direction }) {
@@ -30,6 +141,20 @@ export default function Accounts() {
   const { data: allAccounts, loading: statsLoading, error: statsError, refetch: refetchStats } =
     useAccounts()
   const { panelState, openPanel } = usePanelContext()
+  const { addRecentItem } = useSearch()
+  const location = useLocation()
+
+  // Open account panel from search navigation (openAccountId in router state)
+  useEffect(() => {
+    const id = location.state?.openAccountId
+    if (id) openPanel('account', id)
+  }, [location.state?.openAccountId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Unified panel opener that also records to search recent history
+  const handleOpenAccount = useCallback((type, id) => {
+    openPanel(type, id)
+    addRecentItem(type, id)
+  }, [openPanel, addRecentItem])
 
   const merchantAccounts = allAccounts.filter((a) => a.owner === 'merchant')
   const merchantAsOf = merchantAccounts[0]?.asOf ?? null
@@ -93,8 +218,11 @@ export default function Accounts() {
   const panelOpen = panelState.type === 'account'
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-content-primary leading-snug">Accounts</h1>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-semibold text-content-primary leading-snug">Accounts</h1>
+        <p className="text-sm text-content-tertiary mt-1">Your treasury and customer accounts.</p>
+      </div>
 
       {/* ── Summary banner ────────────────────────────────────────────────── */}
       {statsLoading ? (
@@ -103,43 +231,41 @@ export default function Accounts() {
             <Skeleton className="h-3 w-24" />
             <Skeleton className="h-6 w-40" />
           </div>
-          <div className="w-px h-10 bg-border-primary-light" />
+          <div className="w-px bg-border-primary-light" />
           <div className="space-y-2">
             <Skeleton className="h-3 w-28" />
             <Skeleton className="h-6 w-40" />
             <Skeleton className="h-3 w-32" />
           </div>
-          <div className="w-px h-10 bg-border-primary-light" />
+          <div className="w-px bg-border-primary-light" />
           <div className="space-y-2">
             <Skeleton className="h-3 w-28" />
             <Skeleton className="h-6 w-36" />
             <Skeleton className="h-3 w-24" />
           </div>
         </div>
-      ) : statsError ? null : (
-        <div className="bg-surface-primary border border-border-primary-light rounded-xl px-5 py-4 flex items-top gap-8">
-          {/* YOUR BALANCE — Acme Corp's own operational treasury */}
+      ) : statsError ? null : (<>
+        {/* Banner: mobile stacks vertically (flex-col), tablet/desktop is horizontal (md:flex-row).
+            Dividers: horizontal (h-px) on mobile, vertical (md:w-px md:h-auto) on desktop. */}
+        <div className="bg-surface-primary border border-border-primary-light rounded-xl px-5 py-4 flex flex-col md:flex-row md:items-start gap-4 md:gap-8">
+          {/* YOUR BALANCE */}
           <div>
-            <div className="text-xs font-medium text-content-tertiary mb-2">
-              Your balance
-            </div>
+            <div className="text-xs font-medium text-content-tertiary mb-2">Your balance</div>
             <div className="text-xl font-semibold text-content-primary tabular-nums leading-none">
               {formatUSDC(merchantUsdcTotal)}
             </div>
             {merchantAsOf && (
               <div className="text-xs text-content-tertiary mt-2">
-                As of {new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).format(new Date(merchantAsOf))} today
+                Last updated: {new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).format(new Date(merchantAsOf))}
               </div>
             )}
           </div>
 
-          <div className="w-px h-10 bg-border-primary-light" />
+          <div className="h-px md:h-auto md:w-px bg-border-primary-light flex-shrink-0" />
 
-          {/* UNDER MANAGEMENT — funds custodied for end-users, never combined with above */}
+          {/* UNDER MANAGEMENT */}
           <div>
-            <div className="text-xs font-medium text-content-tertiary mb-2">
-              Under management
-            </div>
+            <div className="text-xs font-medium text-content-tertiary mb-2">Under management</div>
             <div className="text-xl font-semibold text-content-primary tabular-nums leading-none">
               {formatUSDC(customerUsdcTotal)}
             </div>
@@ -148,13 +274,11 @@ export default function Accounts() {
             </div>
           </div>
 
-          <div className="w-px h-10 bg-border-primary-light" />
+          <div className="h-px md:h-auto md:w-px bg-border-primary-light flex-shrink-0" />
 
-          {/* LARGEST ACCOUNT — concentration risk signal for operators */}
+          {/* LARGEST ACCOUNT */}
           <div>
-            <div className="text-xs font-medium text-content-tertiary mb-2">
-              Largest account
-            </div>
+            <div className="text-xs font-medium text-content-tertiary mb-2">Largest account</div>
             {largestAccount ? (
               <>
                 <div className="text-xl font-semibold text-content-primary tabular-nums leading-none">
@@ -169,14 +293,14 @@ export default function Accounts() {
             )}
           </div>
         </div>
-      )}
+      </>)}
 
       {statsError && <ErrorState message={statsError} onRetry={refetchStats} />}
 
       {/* ── Section 1: Merchant accounts (unchanged) ──────────────────────── */}
       <div>
         <div className="px-1 mb-3">
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-content-tertiary">
+          <span className="text-xs font-semibold uppercase tracking-widest text-content-tertiary">
             Your accounts
           </span>
         </div>
@@ -193,11 +317,12 @@ export default function Accounts() {
             </div>
           ) : (
             <table className="w-full">
+              {/* Mobile: Account + Balance only. Type + Currency hidden (hidden md:table-cell). */}
               <thead>
                 <tr className="border-b border-border-primary-light bg-surface-secondary">
                   <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">Account</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">Type</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">Currency</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary hidden md:table-cell">Type</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary hidden md:table-cell">Currency</th>
                   <th className="px-4 py-2.5 text-right text-xs font-medium text-content-tertiary">Balance</th>
                 </tr>
               </thead>
@@ -207,8 +332,8 @@ export default function Accounts() {
                   return (
                     <tr
                       key={acc.id}
-                      onClick={() => openPanel('account', acc.id)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel('account', acc.id) } }}
+                      onClick={() => handleOpenAccount('account', acc.id)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleOpenAccount('account', acc.id) } }}
                       tabIndex={0}
                       className={[
                         'cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary-main focus-visible:ring-inset',
@@ -219,10 +344,10 @@ export default function Accounts() {
                         <div className="text-sm font-medium text-content-primary">{acc.label}</div>
                         <div className="text-xs text-content-tertiary mt-0.5 font-mono">{acc.addressShort}</div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 hidden md:table-cell">
                         <Badge variant="type" value={acc.type} />
                       </td>
-                      <td className="px-4 py-3 text-sm text-content-secondary">{acc.currency}</td>
+                      <td className="px-4 py-3 text-sm text-content-secondary hidden md:table-cell">{acc.currency}</td>
                       <td className="px-4 py-3 text-right tabular-nums text-sm font-medium text-content-primary">
                         {formatAmount(acc.balance, acc.currency)}
                       </td>
@@ -259,12 +384,12 @@ export default function Accounts() {
       */}
       <div>
         <div className="px-1 mb-3">
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-content-tertiary">
+          <span className="text-xs font-semibold uppercase tracking-widest text-content-tertiary">
             Customer accounts
           </span>
         </div>
 
-        {/* Controls row: search + type filter */}
+        {/* Controls row: search left, Filter button right */}
         <div className="flex items-center gap-3 mb-3">
           <input
             type="text"
@@ -273,29 +398,24 @@ export default function Accounts() {
             placeholder="Search by account or customer…"
             className="h-9 w-64 px-3 text-sm bg-surface-primary border border-border-primary-light rounded-lg text-content-primary placeholder:text-content-quaternary focus:outline-none focus:ring-2 focus:ring-action-primary/20 focus:border-action-primary"
           />
-
-          {/* Segmented type filter — 3 options, always visible, faster than a dropdown */}
-          <div className="flex items-center gap-1 bg-surface-secondary border border-border-primary-light rounded-lg p-1">
-            {[
-              { label: 'All', value: '' },
-              { label: 'On-chain', value: 'on-chain' },
-              { label: 'Fiat', value: 'fiat' },
-            ].map(({ label, value }) => (
-              <button
-                key={value}
-                onClick={() => handleTypeFilter(value)}
-                className={[
-                  'h-7 px-3 text-xs font-medium rounded-md transition-colors',
-                  typeFilter === value
-                    ? 'bg-surface-primary text-content-primary shadow-sm'
-                    : 'text-content-tertiary hover:text-content-secondary',
-                ].join(' ')}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <SectionFilter typeFilter={typeFilter} onApply={handleTypeFilter} />
         </div>
+
+        {/* Active filter pill — same visual style as PageHeader active pills */}
+        {typeFilter && (
+          <div className="flex items-center gap-1.5 mb-3">
+            <div className="flex items-center gap-1 pl-2.5 pr-1.5 py-1 text-xs font-medium rounded-full bg-action-primary-light border border-border-primary-light text-action-primary-main">
+              <span>Type: {typeFilter === 'on-chain' ? 'On-chain' : 'Fiat'}</span>
+              <button
+                onClick={() => handleTypeFilter('')}
+                className="ml-0.5 text-action-primary-main hover:text-action-primary-dark cursor-pointer leading-none"
+                aria-label="Remove type filter"
+              >
+                <X width={11} height={11} strokeWidth={2.5} />
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="bg-surface-primary border border-border-primary-light rounded-xl overflow-hidden">
           {tableError ? (
@@ -357,7 +477,8 @@ export default function Accounts() {
                     <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
                       Account
                     </th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
+                    {/* Type + Currency: hidden on mobile */}
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary hidden md:table-cell">
                       Type
                     </th>
                     {/* Customer column hidden when account panel is open to reclaim space */}
@@ -366,7 +487,7 @@ export default function Accounts() {
                         Customer
                       </th>
                     )}
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary hidden md:table-cell">
                       Currency
                     </th>
                     {/* Clickable sort header — toggles asc/desc */}
@@ -386,7 +507,7 @@ export default function Accounts() {
                       acc={acc}
                       panelState={panelState}
                       panelOpen={panelOpen}
-                      onOpen={openPanel}
+                      onOpen={handleOpenAccount}
                     />
                   ))}
                 </tbody>
@@ -462,7 +583,7 @@ function CustomerAccountRow({ acc, panelState, panelOpen, onOpen }) {
         <div className="text-sm font-medium text-content-primary">{acc.label}</div>
         <div className="text-xs text-content-tertiary mt-0.5 font-mono">{acc.addressShort}</div>
       </td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3 hidden md:table-cell">
         <Badge variant="type" value={acc.type} />
       </td>
       {!panelOpen && (
@@ -475,7 +596,7 @@ function CustomerAccountRow({ acc, panelState, panelOpen, onOpen }) {
           </button>
         </td>
       )}
-      <td className="px-4 py-3 text-sm text-content-secondary">{acc.currency}</td>
+      <td className="px-4 py-3 text-sm text-content-secondary hidden md:table-cell">{acc.currency}</td>
       <td className="px-4 py-3 text-right tabular-nums text-sm">
         {acc.balance > 0 ? (
           <span className="font-semibold text-content-primary">

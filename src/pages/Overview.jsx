@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ArrowDown, ArrowUp, CheckCircle } from "lucide-react";
 import { Skeleton, Button } from "@paystack/pax";
 import { usePageTitle } from "../lib/usePageTitle";
 import { useTransactions } from "../hooks/useTransactions";
@@ -10,6 +11,7 @@ import { Badge } from "../components/ui/Badge";
 import { SendFundsModal } from "../components/ui/SendFundsModal";
 import { formatUSDC, formatAmount, formatDatetime } from "../lib/format";
 import { transactions as allTxns } from "../mocks/fixtures/transactions";
+import { buildAlertItems } from "../lib/alerts";
 
 // Derives a 7-day EOD balance series for a set of USDC accounts from the fixture
 // transaction history. Works backwards from currentBalance using:
@@ -99,6 +101,7 @@ const ACTIONS = [
 
 export default function Overview() {
   usePageTitle('Overview')
+  const navigate = useNavigate();
   const { data: txns, loading: txnLoading } = useTransactions({ limit: 5 });
   const { data: accounts, loading: accLoading } = useAccounts();
   const { panelState, openPanel } = usePanelContext();
@@ -124,9 +127,28 @@ export default function Overview() {
   ).size;
 
   const recentTxns = txns.slice(0, 5);
-  const attentionTxns = txns.filter(
-    (t) => t.status === "failed" || t.status === "processing",
+
+  // Alert items: derived synchronously from fixture imports — no loading state needed.
+  // buildAlertItems is called every render; fixtures are in-memory, cost is negligible.
+  const alertItems = buildAlertItems(navigate);
+
+  // Card border reflects the most severe category present, providing peripheral
+  // urgency awareness even before the operator reads the card.
+  const hasCritical = alertItems.some(i => i.category === 'failed_txn');
+  // api_error (especially 401/500) is urgent — integration may be broken.
+  // Treat same as webhook failures for severity colouring.
+  const hasUrgent   = hasCritical || alertItems.some(i =>
+    i.category === 'webhook' || i.category === 'api_error' || i.category === 'kyc_blocked',
   );
+  const alertCardBorder = hasCritical || hasUrgent
+    ? 'border-feedback-warning-border'
+    : 'border-border-primary-light';
+  const alertCardBg = hasCritical || hasUrgent
+    ? 'bg-feedback-warning-light'
+    : 'bg-surface-primary';
+
+  // Show the 5 most recent items in the card; the rest live in the panel.
+  const visibleAlertItems = alertItems.slice(0, 5)
 
   // Derived from fixture transactions — always consistent with the displayed balance.
   // merchantAccountIds: USDC accounts only. walletLabel: the sourceMethod text used
@@ -156,11 +178,12 @@ export default function Overview() {
     <>
     <div className="space-y-8">
 
-      <div className="flex items-center justify-between">
-        {/* ── Page header ──────────────────────────────────────────────────── */}
-        {/* font-weight 500 (medium) keeps this informational, not commanding */}
+      {/* Page header + quick actions.
+          Mobile: stack vertically (flex-col), actions below heading.
+          Tablet/desktop: side by side (sm:flex-row). */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-content-primary leading-snug">
+          <h1 className="text-xl lg:text-2xl font-semibold text-content-primary leading-snug">
             {getGreeting()}, Acme Corp
           </h1>
           <p className="text-sm text-content-tertiary mt-1">
@@ -168,10 +191,7 @@ export default function Overview() {
           </p>
         </div>
 
-        {/* ── Quick actions ────────────────────────────────────────────────── */}
-        {/* Compact outlined buttons — visually secondary to the data below.
-            Horizontal flex, not a grid of cards. ~36px tall.
-            "Send funds" opens the transfer modal; other buttons are non-functional stubs. */}
+        {/* Quick actions — compact outlined buttons. */}
         <div className="flex items-center gap-2">
           {ACTIONS.map((action) => (
             <Button
@@ -189,13 +209,12 @@ export default function Overview() {
         </div>
       </div>
 
-      {/* ── Balance card — two-column flex layout ───────────────────────────── */}
-      {/* Left (60%): label + number + trend + sparkline.
-          Right (40%): breakdown rows, vertically centered.
-          Vertical divider separates the two halves.
-          Sparkline bleeds to the left card edge via -ml-5; the column's right
-          padding bounds it on the right. overflow-hidden clips fill to corners. */}
-      <div className="bg-surface-primary border border-border-primary-light rounded-xl overflow-hidden flex">
+      {/* ── Balance card ─────────────────────────────────────────────────────── */}
+      {/* Mobile: single column (flex-col). Tablet/desktop: two-column (flex-row).
+          Left/top (flex-[2]): label + number + trend + sparkline.
+          Right/bottom (flex-[1]): breakdown rows.
+          Divider: horizontal on mobile (h-px), vertical on desktop (w-px). */}
+      <div className="bg-surface-primary border border-border-primary-light rounded-xl overflow-hidden flex flex-col md:flex-row">
 
         {/* ── Left column ── */}
         <div className="flex-[2] min-w-0 pt-5 pl-5 pr-0 pb-0 flex flex-col">
@@ -232,8 +251,8 @@ export default function Overview() {
           </div>
         </div>
 
-        {/* ── Vertical divider ── */}
-        <div className="w-px bg-border-primary-light self-stretch flex-shrink-0" />
+        {/* Divider: horizontal on mobile, vertical on desktop */}
+        <div className="h-px md:h-auto md:w-px bg-border-primary-light flex-shrink-0" />
 
         {/* ── Right column ── */}
         {/* justify-center groups both rows at vertical center.
@@ -275,10 +294,60 @@ export default function Overview() {
         </div>
       </div>
 
-      {/* ── Two-column: transactions (65%) + accounts/alerts (35%) ───────── */}
-      <div className="grid grid-cols-3 gap-6">
-        {/* Recent transactions */}
-        <div className="col-span-2 bg-surface-primary border border-border-primary-light rounded-xl overflow-hidden">
+      {/* ── Your accounts — full-width, like the balance card ──────────────── */}
+      <div className="bg-surface-primary border border-border-primary-light rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-border-primary-light">
+          <span className="text-xs font-semibold text-content-tertiary uppercase tracking-[0.06em]">
+            Your accounts
+          </span>
+        </div>
+        {accLoading ? (
+          <div className="p-4 space-y-2.5">
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
+        ) : (
+          <div className="divide-y divide-border-primary-light">
+            {merchantAccounts.map((acc) => (
+              <div
+                key={acc.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => openPanel("account", acc.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel("account", acc.id) } }}
+                className={[
+                  "px-4 py-3 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary-main focus-visible:ring-inset",
+                  panelState.type === "account" && panelState.id === acc.id
+                    ? "bg-surface-secondary"
+                    : "hover:bg-surface-secondary",
+                ].join(" ")}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-content-primary leading-snug">
+                      {acc.label}
+                    </div>
+                    <div className="text-xs text-content-tertiary mt-0.5 font-mono">
+                      {acc.addressShort} · {acc.currency}
+                    </div>
+                  </div>
+                  <div className="text-sm font-semibold text-content-primary tabular-nums whitespace-nowrap">
+                    {formatAmount(acc.balance, acc.currency)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Transactions + Needs Attention ───────────────────────────────────── */}
+      {/* Desktop: 2-col grid (transactions 2/3, alerts 1/3).
+          Mobile: single column. Needs Attention comes FIRST on mobile (order-first)
+          because it's more actionable than the full transaction list.
+          CSS order-1/order-2 controls visual sequence without changing DOM order. */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+        {/* Recent transactions — order-2 on mobile (after alerts), order-1 on desktop */}
+        <div className="col-span-1 md:col-span-2 order-2 md:order-1 bg-surface-primary border border-border-primary-light rounded-xl overflow-hidden">
           <div className="px-4 py-3 border-b border-border-primary-light">
             <span className="text-xs font-semibold text-content-tertiary uppercase tracking-[0.06em]">
               Recent transactions
@@ -357,46 +426,51 @@ export default function Overview() {
           )}
         </div>
 
-        {/* Right column */}
-        <div className="space-y-4">
-          {/* Your accounts — merchant-owned only */}
-          <div className="bg-surface-primary border border-border-primary-light rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-border-primary-light">
-              <span className="text-xs font-semibold text-content-tertiary uppercase tracking-[0.06em]">
-                Your accounts
+        {/* Alerts column — order-1 on mobile (first), order-2 on desktop (second) */}
+        <div className="order-1 md:order-2 space-y-4">
+          {/* Needs attention — always rendered; content switches between all-clear and
+              grouped alert items. Border colour reflects worst active category:
+                danger  → failed transactions
+                warning → webhook failures or KYC blocked customers
+                neutral → stalled transactions only, or all-clear */}
+          <div className={`bg-surface-primary border ${alertCardBorder} rounded-xl overflow-hidden`}>
+            <div className="px-4 py-4 border-b border-feedback-warning-border bg-feedback-warning-light flex items-center gap-2">
+              <span className="text-xs font-semibold text-feedback-warning-dark uppercase tracking-[0.06em] flex-1">
+                Needs attention
               </span>
+              {/* "View all →" opens the NeedsAttentionPanel for a focused full-list view */}
+              {alertItems.length > 0 && (
+                <Button
+                  variant="text"
+                  color="secondary"
+                  size="xs"
+                  className="cursor-pointer"
+                  onClick={() => openPanel('needs_attention', 'all')}
+                >
+                  View all ({alertItems.length})
+                </Button>
+              )}
             </div>
-            {accLoading ? (
-              <div className="p-4 space-y-2.5">
-                <Skeleton className="h-10 w-full rounded-md" />
+
+            {alertItems.length === 0 ? (
+              <div className="px-4 py-4 flex items-center gap-2">
+                <CheckCircle width={15} height={15} strokeWidth={1.75} className="text-feedback-success-main flex-shrink-0" aria-hidden="true" />
+                <span className="text-sm text-content-tertiary">Everything looks good.</span>
               </div>
             ) : (
               <div className="divide-y divide-border-primary-light">
-                {merchantAccounts.map((acc) => (
+                {visibleAlertItems.map(item => (
                   <div
-                    key={acc.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => openPanel("account", acc.id)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel("account", acc.id) } }}
-                    className={[
-                      "px-4 py-2.5 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary-main focus-visible:ring-inset rounded",
-                      panelState.type === "account" && panelState.id === acc.id
-                        ? "bg-surface-secondary"
-                        : "hover:bg-surface-secondary",
-                    ].join(" ")}
+                    key={item.key}
+                    onClick={item.onView}
+                    className="flex items-center gap-2.5 px-4 py-2.5 cursor-pointer hover:bg-surface-secondary transition-colors"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-content-primary truncate leading-snug">
-                          {acc.label}
-                        </div>
-                        <div className="text-xs text-content-tertiary mt-0.5 truncate leading-none">
-                          {acc.addressShort} • {acc.currency}
-                        </div>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-sm font-medium text-content-primary leading-snug ${item.mono ? 'font-mono' : ''}`}>
+                        {item.primary}
                       </div>
-                      <div className="text-sm font-medium text-content-primary tabular-nums whitespace-nowrap">
-                        {formatAmount(acc.balance, acc.currency)}
+                      <div className="text-xs text-content-tertiary mt-0.5 leading-none">
+                        {item.secondary}
                       </div>
                     </div>
                   </div>
@@ -404,33 +478,6 @@ export default function Overview() {
               </div>
             )}
           </div>
-
-          {/* Needs attention — compact alert block, only shown when relevant */}
-          {!txnLoading && attentionTxns.length > 0 && (
-            <div className="bg-surface-primary border border-feedback-warning-border rounded-xl overflow-hidden">
-              <div className="px-4 py-2.5 border-b border-feedback-warning-border bg-feedback-warning-light">
-                <span className="text-xs font-semibold text-feedback-warning-dark uppercase tracking-[0.06em]">
-                  Needs attention
-                </span>
-              </div>
-              <div className="divide-y divide-border-primary-light">
-                {attentionTxns.map((txn) => (
-                  <div
-                    key={txn.id}
-                    className="p-4 flex items-center gap-2"
-                  >
-                    <Badge variant="status" value={txn.status} />
-                    <span className="text-sm font-mono text-content-secondary truncate flex-1 min-w-0">
-                      {txn.id}
-                    </span>
-                    <span className="text-sm font-medium text-content-primary tabular-nums whitespace-nowrap">
-                      {formatAmount(txn.destAmount, txn.destCurrency)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

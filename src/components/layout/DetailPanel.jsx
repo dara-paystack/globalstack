@@ -8,7 +8,7 @@
 export function PanelSection({ title, children }) {
   return (
     <div>
-      <div className="text-[10px] font-semibold uppercase tracking-widest text-content-tertiary mb-3">
+      <div className="text-xs font-semibold uppercase tracking-widest text-content-tertiary mb-3">
         {title}
       </div>
       <div className="space-y-2.5">{children}</div>

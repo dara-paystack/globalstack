@@ -11,8 +11,8 @@
 // Usage:
 //   <Badge variant="type" value={txn.type} />
 //   <Badge variant="status" value={txn.status} />
-//   <Badge variant="status" value={customer.kycStatus} />
-//   <Badge variant="status" value="active">KYC: Approved</Badge>  ← children override label
+//   <Badge variant="status" value={customer.kycStatus} context="kyc" />
+//   <Badge variant="status" value={recipient.status} />  ← "active" → "Active" (no kyc context)
 
 import { Chip } from '@paystack/pax'
 
@@ -102,14 +102,15 @@ function formatLabel(value) {
     .replace(/^\w/, (c) => c.toUpperCase())
 }
 
-export function Badge({ variant, value, children }) {
-  // Children always win — callers use this for "KYC: Approved" prefixes etc.
+// context="kyc" opts into the KYC_LABELS map so 'active' → "Approved".
+// Without it, 'active' falls through to formatLabel → "Active".
+// This removes the need for children overrides at non-KYC call sites.
+export function Badge({ variant, value, context, children }) {
   let label = children
 
   if (!label) {
-    // Check specific label maps first, fall back to generic formatting
     label =
-      KYC_LABELS[value] ??
+      (context === 'kyc' ? KYC_LABELS[value] : undefined) ??
       ACCOUNT_STATUS_LABELS[value] ??
       formatLabel(value)
   }

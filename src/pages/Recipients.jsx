@@ -4,7 +4,7 @@
 // Operators use this to audit "where can my customers send money?"
 // and verify that saved bank accounts / wallet addresses are correct.
 //
-// Filter bar: Customer / Type / Status
+// Filter bar: Customer / Type / Status (via universal PageHeader filter panel)
 // Table: Name · Customer · Destination · Rail · Status · Created
 // Row click → GlobalPanel (type='recipient')
 //
@@ -13,8 +13,8 @@
 // a separate integration — not a simple form. Coming soon placeholder keeps
 // the intent visible without shipping an incomplete flow.
 
-import { useState } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { usePageTitle } from '../lib/usePageTitle'
 import {
   Skeleton,
@@ -23,7 +23,9 @@ import {
 import { useRecipients } from '../hooks/useRecipients'
 import { useCustomers } from '../hooks/useCustomers'
 import { usePanelContext } from '../context/PanelContext'
+import { useSearch } from '../context/SearchContext'
 import { Badge } from '../components/ui/Badge'
+import { PageHeader } from '../components/ui/PageHeader'
 import { formatDate } from '../lib/format'
 
 const RAIL_LABELS = {
@@ -83,36 +85,48 @@ function ComingSoonToast({ visible }) {
 
 export default function Recipients() {
   usePageTitle('Recipients')
-  const [customerFilter, setCustomerFilter] = useState('')
-  const [typeFilter, setTypeFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  // 'all' is the Radix sentinel for "no filter selected" — same pattern as Transactions.
+  // Converted to '' when building the API request via fromSelect().
+  const [customerFilter, setCustomerFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
   const [page, setPage] = useState(1)
   const [showComingSoon, setShowComingSoon] = useState(false)
 
   const { panelState, openPanel } = usePanelContext()
+  const { addRecentItem } = useSearch()
+  const location = useLocation()
   const { data: customers } = useCustomers()
 
+  // Open recipient panel from search navigation (openRecipientId in router state)
+  useEffect(() => {
+    const id = location.state?.openRecipientId
+    if (id) openPanel('recipient', id)
+  }, [location.state?.openRecipientId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function fromSelect(val) {
+    return val === 'all' ? '' : val
+  }
+
   const { data: recipients, meta, loading, error } = useRecipients({
-    customerId: customerFilter,
-    type: typeFilter,
-    status: statusFilter,
+    customerId: fromSelect(customerFilter),
+    type: fromSelect(typeFilter),
+    status: fromSelect(statusFilter),
     page,
     limit: 15,
   })
 
-  const hasActiveFilters = customerFilter || typeFilter || statusFilter
+  const hasActiveFilters = fromSelect(customerFilter) || fromSelect(typeFilter) || fromSelect(statusFilter)
 
-  function handleFilterChange(setter) {
-    return (e) => {
-      setter(e.target.value)
-      setPage(1)
-    }
-  }
+  // Filter change helpers — also reset to page 1 on each apply
+  function applyCustomer(val) { setCustomerFilter(val); setPage(1) }
+  function applyType(val) { setTypeFilter(val); setPage(1) }
+  function applyStatus(val) { setStatusFilter(val); setPage(1) }
 
   function clearFilters() {
-    setCustomerFilter('')
-    setTypeFilter('')
-    setStatusFilter('')
+    setCustomerFilter('all')
+    setTypeFilter('all')
+    setStatusFilter('all')
     setPage(1)
   }
 
@@ -125,113 +139,81 @@ export default function Recipients() {
 
   const isPanelOpen = !!panelState.type
 
-  // Filter dropdown base classes — consistent with Transactions filter bar style
-  const selectBase =
-    'h-8 px-2.5 pr-7 text-sm rounded-lg border border-border-primary-main bg-surface-primary text-content-secondary appearance-none cursor-pointer hover:border-border-primary-dark focus:outline-none focus:ring-1 focus:ring-action-primary-main transition-colors'
+  // Build customer options for the Customer filter — dynamic from loaded customers list
+  const customerOptions = [
+    { value: 'all', label: 'All customers' },
+    ...customers.map((c) => ({ value: c.id, label: c.name })),
+  ]
+
+  // Filter definitions for PageHeader
+  const filters = [
+    {
+      id: 'customer',
+      label: 'Customer',
+      options: customerOptions,
+      value: customerFilter,
+      defaultValue: 'all',
+      onChange: applyCustomer,
+    },
+    {
+      id: 'type',
+      label: 'Type',
+      options: [
+        { value: 'all', label: 'All types' },
+        { value: 'fiat', label: 'Bank account' },
+        { value: 'crypto', label: 'Crypto wallet' },
+      ],
+      value: typeFilter,
+      defaultValue: 'all',
+      onChange: applyType,
+    },
+    {
+      id: 'status',
+      label: 'Status',
+      options: [
+        { value: 'all', label: 'All statuses' },
+        { value: 'active', label: 'Active' },
+        { value: 'archived', label: 'Archived' },
+      ],
+      value: statusFilter,
+      defaultValue: 'all',
+      onChange: applyStatus,
+    },
+  ]
 
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-content-primary leading-snug">
-          Recipients
-        </h1>
-        <p className="text-sm text-content-tertiary mt-1">
-          Saved payout destinations for your customers.
-        </p>
-      </div>
-
-      {/* Filter bar */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {/* Customer filter */}
-        <div className="relative">
-          <select
-            value={customerFilter}
-            onChange={handleFilterChange(setCustomerFilter)}
-            className={selectBase}
-          >
-            <option value="">All customers</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-content-tertiary" width={10} height={10} strokeWidth={1.25} />
-        </div>
-
-        {/* Type filter */}
-        <div className="relative">
-          <select
-            value={typeFilter}
-            onChange={handleFilterChange(setTypeFilter)}
-            className={selectBase}
-          >
-            <option value="">All types</option>
-            <option value="fiat">Bank account</option>
-            <option value="crypto">Crypto wallet</option>
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-content-tertiary" width={10} height={10} strokeWidth={1.25} />
-        </div>
-
-        {/* Status filter */}
-        <div className="relative">
-          <select
-            value={statusFilter}
-            onChange={handleFilterChange(setStatusFilter)}
-            className={selectBase}
-          >
-            <option value="">All statuses</option>
-            <option value="active">Active</option>
-            <option value="archived">Archived</option>
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-content-tertiary" width={10} height={10} strokeWidth={1.25} />
-        </div>
-
-        {hasActiveFilters && (
-          <button
-            onClick={clearFilters}
-            className="h-8 px-2.5 text-sm text-content-tertiary hover:text-content-primary cursor-pointer transition-colors"
-          >
-            Clear filters
-          </button>
-        )}
-
-        {/* Add recipient — right-aligned */}
-        <div className="ml-auto">
-          <button
-            onClick={handleAddRecipient}
-            className="h-8 px-3 text-sm font-medium rounded-lg border border-border-primary-main text-content-secondary hover:text-content-primary hover:bg-surface-secondary transition-colors cursor-pointer flex items-center gap-1.5"
-          >
-            <span>+</span>
-            Add recipient
-          </button>
-        </div>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        title="Recipients"
+        subtitle="Saved payout destinations for your customers."
+        filters={filters}
+        primaryAction={{ label: '+ Add recipient', onClick: handleAddRecipient }}
+      />
 
       {/* Table */}
       <div className="bg-surface-primary border border-border-primary-light rounded-xl overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="border-b border-border-primary-light bg-surface-secondary">
+              {/* Mobile: Name + Destination only. Customer, Rail, Status, Created hidden. */}
               <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
                 Name
               </th>
               {!isPanelOpen && (
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary hidden md:table-cell">
                   Customer
                 </th>
               )}
               <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
                 Destination
               </th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
+              <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary hidden md:table-cell">
                 Rail
               </th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
+              <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary hidden md:table-cell">
                 Status
               </th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
+              <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary hidden md:table-cell">
                 Created
               </th>
             </tr>
@@ -287,8 +269,8 @@ export default function Recipients() {
                 return (
                   <tr
                     key={recipient.id}
-                    onClick={() => openPanel('recipient', recipient.id)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel('recipient', recipient.id) } }}
+                    onClick={() => { openPanel('recipient', recipient.id); addRecentItem('recipient', recipient.id) }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel('recipient', recipient.id); addRecentItem('recipient', recipient.id) } }}
                     tabIndex={0}
                     className={[
                       'cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary-main focus-visible:ring-inset',
@@ -305,32 +287,30 @@ export default function Recipients() {
                       </div>
                     </td>
 
-                    {/* Customer — hidden when panel is open (col too wide) */}
+                    {/* Customer — hidden on mobile AND when panel is open */}
                     {!isPanelOpen && (
-                      <td className="px-4 py-3 text-sm text-content-primary">
+                      <td className="px-4 py-3 text-sm text-content-primary hidden md:table-cell">
                         {customer?.name ?? '—'}
                       </td>
                     )}
 
-                    {/* Destination */}
+                    {/* Destination — always visible */}
                     <td className="px-4 py-3">
                       <DestinationCell recipient={recipient} />
                     </td>
 
-                    {/* Rail */}
-                    <td className="px-4 py-3 text-sm text-content-secondary">
+                    {/* Rail — hidden on mobile */}
+                    <td className="px-4 py-3 text-sm text-content-secondary hidden md:table-cell">
                       {RAIL_LABELS[recipient.rail] ?? recipient.rail}
                     </td>
 
-                    {/* Status */}
-                    <td className="px-4 py-3">
-                      <Badge variant="status" value={recipient.status}>
-                        {recipient.status === 'active' ? 'Active' : 'Archived'}
-                      </Badge>
+                    {/* Status — hidden on mobile */}
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      <Badge variant="status" value={recipient.status} />
                     </td>
 
-                    {/* Created */}
-                    <td className="px-4 py-3 text-sm text-content-tertiary whitespace-nowrap">
+                    {/* Created — hidden on mobile */}
+                    <td className="px-4 py-3 text-sm text-content-tertiary whitespace-nowrap hidden md:table-cell">
                       {formatDate(recipient.createdAt)}
                     </td>
                   </tr>

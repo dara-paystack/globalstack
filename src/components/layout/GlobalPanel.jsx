@@ -5,20 +5,22 @@
 
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Skeleton, Tabs, TabsList, TabsTrigger, TabsContent, Button } from '@paystack/pax'
-import { Circle, X, ArrowUp } from 'lucide-react'
+import { Skeleton, Tabs, TabsList, TabsTrigger, TabsContent, Button, Chip } from '@paystack/pax'
+import { Circle, X, ArrowLeft, ArrowUp, ArrowDown, CheckCircle } from 'lucide-react'
 import { usePanelContext } from '../../context/PanelContext'
 import { useTransaction } from '../../hooks/useTransactions'
 import { useAccount } from '../../hooks/useAccounts'
 import { useCustomer } from '../../hooks/useCustomers'
 import { useWebhook, useWebhookDeliveries } from '../../hooks/useWebhooks'
 import { useRecipient } from '../../hooks/useRecipients'
+import { useRequestLogEntry } from '../../hooks/useRequestLog'
 import { Badge } from '../ui/Badge'
 import { CopyButton } from '../ui/CopyButton'
 import { Timeline } from '../ui/Timeline'
 import { PanelSection, PanelRow } from './DetailPanel'
 import { SendFundsModal } from '../ui/SendFundsModal'
 import { formatAmount, formatUSDC, formatDatetime, formatDate, formatRelative } from '../../lib/format'
+import { buildAlertItems, groupAlertItems, ALERT_CATEGORY_LABELS } from '../../lib/alerts'
 import { accounts as allAccounts } from '../../mocks/fixtures/accounts'
 import { transactions } from '../../mocks/fixtures/transactions'
 import { transfers as allTransfers } from '../../mocks/fixtures/transfers'
@@ -45,15 +47,35 @@ const CHAIN_LABELS = {
   ethereum: 'Ethereum',
 }
 
-function CloseButton({ onClick }) {
+// PanelHeader — close button row, responsive.
+// Mobile: back arrow (←) top-left, panel is full-screen, "back" = return to list.
+// Tablet/desktop: × top-right, panel is a push drawer alongside the table.
+// Why back vs ×: full-screen panel feels like a navigation drill-down (native app
+// pattern). "Back" is the expected affordance. "Close" implies a floating overlay.
+function PanelHeader({ onClose }) {
   return (
-    <button
-      onClick={onClick}
-      aria-label="Close panel"
-      className="p-1.5 rounded-md text-content-tertiary hover:bg-surface-tertiary hover:text-content-primary transition-colors cursor-pointer"
-    >
-      <X width={16} height={16} strokeWidth={1.5} />
-    </button>
+    <div className="flex items-center px-4 pt-4 pb-2 shrink-0">
+      {/* Back arrow — mobile only (md:hidden). Left-aligned. 44×44px touch target. */}
+      <button
+        onClick={onClose}
+        aria-label="Go back"
+        className="md:hidden w-11 h-11 flex items-center justify-center rounded-lg text-content-tertiary hover:bg-surface-tertiary hover:text-content-primary transition-colors cursor-pointer"
+      >
+        <ArrowLeft width={18} height={18} strokeWidth={1.75} />
+      </button>
+
+      {/* Spacer — pushes × to the right on tablet/desktop */}
+      <div className="flex-1" />
+
+      {/* × button — tablet/desktop only (hidden md:flex). Right-aligned. */}
+      <button
+        onClick={onClose}
+        aria-label="Close panel"
+        className="hidden md:flex items-center justify-center w-8 h-8 rounded-md text-content-tertiary hover:bg-surface-tertiary hover:text-content-primary transition-colors cursor-pointer"
+      >
+        <X width={16} height={16} strokeWidth={1.5} />
+      </button>
+    </div>
   )
 }
 
@@ -78,6 +100,63 @@ function PanelSkeleton() {
 
 // ─── Shell ─────────────────────────────────────────────────────────────────
 
+// NeedsAttentionPanel — full-list view of all operational alerts, grouped by category.
+// Opened by the "View all →" button in the Overview "Needs Attention" card.
+// Each row navigates to the relevant page; AppShell closes this panel automatically
+// on route change via its location.pathname useEffect.
+function NeedsAttentionPanel() {
+  const navigate = useNavigate()
+  const items = buildAlertItems(navigate)
+  const groups = groupAlertItems(items)
+
+  return (
+    <div>
+      <div className="mb-5">
+        <h2 className="text-base font-semibold text-content-primary">Needs attention</h2>
+        <p className="text-sm text-content-tertiary mt-0.5">
+          {items.length === 0
+            ? 'No issues at this time.'
+            : `${items.length} item${items.length !== 1 ? 's' : ''} need review`}
+        </p>
+      </div>
+
+      {items.length === 0 ? (
+        <div className="flex items-center gap-2 py-2 text-sm text-content-tertiary">
+          <CheckCircle width={15} height={15} strokeWidth={1.75} className="text-feedback-success-main flex-shrink-0" aria-hidden="true" />
+          Everything looks good.
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {Object.entries(groups).map(([category, catItems]) => (
+            <div key={category}>
+              {/* Category header — same style as PanelSection labels */}
+              <div className="text-xs font-semibold text-content-tertiary uppercase tracking-[0.06em] mb-2">
+                {ALERT_CATEGORY_LABELS[category]}
+              </div>
+              <div className="border border-border-primary-light rounded-lg overflow-hidden divide-y divide-border-primary-light">
+                {catItems.map(item => (
+                  <div
+                    key={item.key}
+                    onClick={item.onView}
+                    className="px-3 py-2.5 cursor-pointer hover:bg-surface-secondary transition-colors"
+                  >
+                    <div className={`text-sm font-medium text-content-primary truncate leading-snug ${item.mono ? 'font-mono' : ''}`}>
+                      {item.primary}
+                    </div>
+                    <div className="text-xs text-content-tertiary mt-0.5 truncate">
+                      {item.secondary}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function GlobalPanel() {
   const { panelState, closePanel } = usePanelContext()
   const isOpen = !!panelState.type
@@ -88,6 +167,17 @@ export function GlobalPanel() {
     // aria-hidden when closed: the panel has zero width but its DOM content still
     // exists. aria-hidden prevents screen readers from finding focusable elements
     // inside the collapsed panel before it's opened.
+    // Responsive panel widths:
+    //   Mobile  (< md): 100vw — full screen, covers content entirely.
+    //   Tablet  (md:  ): 380px — push panel alongside table.
+    //   Desktop (lg:  ): 420px — push panel alongside table.
+    //
+    // On mobile, <main> collapses to width 0 (flex-1 with the panel taking 100vw).
+    // overflow-hidden on the parent clips this. The operator sees only the panel.
+    // Closing restores <main> to flex-1.
+    //
+    // The inner container is fixed to the panel's width so the scrollable content
+    // doesn't reflux during the width animation on close.
     <div
       role="complementary"
       aria-label="Detail panel"
@@ -95,13 +185,11 @@ export function GlobalPanel() {
       className={[
         'shrink-0 bg-surface-primary border-l border-border-primary-light flex flex-col',
         'transition-all duration-200 ease-out overflow-hidden',
-        isOpen ? 'w-[420px]' : 'w-0',
+        isOpen ? 'w-screen md:w-[380px] lg:w-[420px]' : 'w-0',
       ].join(' ')}
     >
-      <div className="w-[420px] flex flex-col h-full">
-        <div className="flex items-center justify-end px-4 pt-4 pb-2 shrink-0">
-          <CloseButton onClick={closePanel} />
-        </div>
+      <div className="w-screen md:w-[380px] lg:w-[420px] flex flex-col h-full">
+        <PanelHeader onClose={closePanel} />
         <div className="flex-1 overflow-y-auto px-6 pb-6">
           {panelState.type === 'transaction' && (
             <TransactionPanel id={panelState.id} />
@@ -117,6 +205,12 @@ export function GlobalPanel() {
           )}
           {panelState.type === 'recipient' && (
             <RecipientPanel id={panelState.id} />
+          )}
+          {panelState.type === 'requestLog' && (
+            <RequestLogPanel id={panelState.id} />
+          )}
+          {panelState.type === 'needs_attention' && (
+            <NeedsAttentionPanel />
           )}
         </div>
       </div>
@@ -298,14 +392,32 @@ function TransactionDetail({ txn }) {
 
 // ─── Account panel ──────────────────────────────────────────────────────────
 
+// Returns the last 5 transactions involving this account as source or destination.
+// Only completed + pending — failed/canceled/reversed are operational noise at this level.
+// Sorted newest-first so the most recent activity is immediately visible.
 function getRecentActivity(accountId) {
   return transactions
     .filter(
       (t) =>
-        t.destinationAccount === accountId &&
+        (t.sourceAccountId === accountId || t.destinationAccount === accountId) &&
         (t.status === 'completed' || t.status === 'pending'),
     )
-    .slice(0, 4)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 5)
+}
+
+// One-line plain-language description of what happened, from this account's perspective.
+//   Conversion:  corridor string ("NGN → USDC", "USDC → KES")
+//   Deposit:     "From [sourceAddressShort]" — specific wallet address, never generic label
+//   Withdrawal:  "To [destination]" — destination already carries the short address or bank name
+function activityDescription(txn) {
+  if (txn.type === 'conversion') return txn.corridor
+  if (txn.type === 'deposit') {
+    if (txn.sourceAddressShort) return `From ${txn.sourceAddressShort}`
+    return `From ${txn.sourceMethod}`
+  }
+  if (txn.type === 'withdrawal') return `To ${txn.destination}`
+  return txn.type
 }
 
 function AccountPanel({ id }) {
@@ -320,12 +432,13 @@ function AsOfNote({ timestamp }) {
   if (!timestamp) return null
   return (
     <div className="text-xs text-content-tertiary mt-1">
-      As of {formatDatetime(timestamp)}
+      Last updated: {formatDatetime(timestamp)}
     </div>
   )
 }
 
 function AccountDetail({ account }) {
+  const navigate = useNavigate()
   const activity = getRecentActivity(account.id)
   const isMerchant = account.owner === 'merchant'
   const isFiat = account.type === 'fiat'
@@ -434,49 +547,96 @@ function AccountDetail({ account }) {
       {sendFundsOpen && (
         <SendFundsModal
           key={account.id}
+          open
           preselectedAccountId={account.id}
           onClose={() => setSendFundsOpen(false)}
         />
       )}
 
-      {activity.length > 0 && (
-        <PanelSection title="Recent Activity">
-          <div className="space-y-3">
-            {activity.map((txn) => {
-              // Transactions reaching this account are credits (destinationAccount match).
-              // Conversions to USDC are credits; deposits are always credits.
-              const isCredit = txn.type === 'conversion'
-                ? txn.destCurrency === 'USDC'
-                : txn.type === 'deposit'
+      {/* Recent Activity — always rendered; shows empty state when no transactions.
+          getRecentActivity filters both source and destination, so outflows appear too.
+          isCredit is determined by which field matched the account ID, not by type —
+          the same USDC→NGN conversion is a debit for the source wallet and invisible
+          to all other accounts. Account-centric, not transaction-centric.
+          "View all" lives in the section header row — the established pattern for
+          overflow sections in panels. */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-xs font-semibold uppercase tracking-widest text-content-tertiary">
+            Recent Activity
+          </div>
+          <Button
+            variant="text"
+            color="secondary"
+            size="xs"
+            className="cursor-pointer"
+            onClick={() => navigate('/transactions', { state: { filterAccountId: account.id } })}
+          >
+            View all
+          </Button>
+        </div>
+        {activity.length === 0 ? (
+          <p className="text-sm text-content-tertiary text-center py-2">No activity yet.</p>
+        ) : (
+          <div>
+            {activity.map((txn, index) => {
+              const isCredit = txn.destinationAccount === account.id
+              // Inflows: show what arrived (destAmount/destCurrency — the account's currency)
+              // Outflows: show what left (sourceAmount/sourceCurrency — also the account's currency)
+              const amount = isCredit
+                ? formatAmount(txn.destAmount, txn.destCurrency)
+                : formatAmount(txn.sourceAmount, txn.sourceCurrency)
               return (
-                <div key={txn.id} className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-sm text-content-primary truncate">
-                      {txn.type === 'conversion'
-                        ? `Conversion (${txn.corridor})`
-                        : txn.type === 'deposit'
-                        ? `Deposit from ${txn.sourceMethod}`
-                        : `Withdrawal to ${txn.destination}`}
-                    </div>
-                    <div className="text-xs text-content-tertiary">
-                      {formatRelative(txn.createdAt)}
+                <div
+                  key={txn.id}
+                  className={[
+                    'flex items-center gap-3 py-3',
+                    index < activity.length - 1 ? 'border-b border-border-default' : '',
+                  ].join(' ')}
+                >
+                  {/* Left: directional icon + description/timestamp stack.
+                      items-start on inner flex aligns icon to the description line,
+                      not the vertical midpoint of the two-line text block. */}
+                  <div className="flex items-start gap-2 flex-1 min-w-0">
+                    {isCredit ? (
+                      <ArrowDown
+                        width={16}
+                        height={16}
+                        strokeWidth={2.5}
+                        className="text-feedback-success-main shrink-0 mt-px"
+                      />
+                    ) : (
+                      <ArrowUp
+                        width={16}
+                        height={16}
+                        strokeWidth={2.5}
+                        className="text-feedback-danger-main shrink-0 mt-px"
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-medium text-content-primary truncate leading-snug">
+                        {activityDescription(txn)}
+                      </div>
+                      <div className="text-xs text-content-tertiary mt-0.5">
+                        {formatRelative(txn.createdAt)}
+                      </div>
                     </div>
                   </div>
+                  {/* Right: signed amount, right-aligned, vertically centered */}
                   <div
                     className={[
-                      'text-sm font-semibold tabular-nums whitespace-nowrap',
+                      'text-[13px] font-medium tabular-nums whitespace-nowrap',
                       isCredit ? 'text-feedback-success-main' : 'text-feedback-danger-main',
                     ].join(' ')}
                   >
-                    {isCredit ? '+' : '-'}
-                    {formatAmount(txn.destAmount, txn.destCurrency)}
+                    {isCredit ? '+' : '−'}{amount}
                   </div>
                 </div>
               )
             })}
           </div>
-        </PanelSection>
-      )}
+        )}
+      </div>
 
       {/* Account number copy toast — fixed bottom-right, auto-dismisses after 2s */}
       {acctNumCopied && (
@@ -514,8 +674,7 @@ function CustomerDetail({ customer }) {
         <div className="text-xs font-mono text-content-tertiary mb-3">{customer.id}</div>
         <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="type" value={customer.type} />
-          {/* Badge handles KYC label mapping (active→Approved etc.) */}
-          <Badge variant="status" value={customer.kycStatus} />
+          <Badge variant="status" value={customer.kycStatus} context="kyc" />
         </div>
       </div>
 
@@ -769,11 +928,11 @@ function KycTab({ customer }) {
     <div className="px-6 py-5 space-y-6">
       {/* KYC status block */}
       <div>
-        <div className="text-[10px] font-semibold uppercase tracking-widest text-content-tertiary mb-3">
+        <div className="text-xs font-semibold uppercase tracking-widest text-content-tertiary mb-3">
           KYC Status
         </div>
         <div className="mb-3">
-          <Badge variant="status" value={kycStatus} />
+          <Badge variant="status" value={kycStatus} context="kyc" />
         </div>
         {content && (
           <div className="rounded-lg border border-border-primary-light bg-surface-secondary p-4 space-y-3">
@@ -816,7 +975,7 @@ function KycTab({ customer }) {
 
       {/* TOS Status — always shown; state communicates whether customer can transact */}
       <div>
-        <div className="text-[10px] font-semibold uppercase tracking-widest text-content-tertiary mb-3">
+        <div className="text-xs font-semibold uppercase tracking-widest text-content-tertiary mb-3">
           Terms of Service
         </div>
         {tosStatus ? (
@@ -850,7 +1009,7 @@ function KycTab({ customer }) {
 
       {/* Document checklist — always shown for context */}
       <div>
-        <div className="text-[10px] font-semibold uppercase tracking-widest text-content-tertiary mb-3">
+        <div className="text-xs font-semibold uppercase tracking-widest text-content-tertiary mb-3">
           Documents
         </div>
         <div className="space-y-3">
@@ -920,9 +1079,7 @@ function RecipientDetail({ recipient }) {
         <div className="font-mono text-xs text-content-tertiary mb-3">{recipient.id}</div>
         <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="type" value={isFiat ? 'fiat' : 'crypto'} />
-          <Badge variant="status" value={recipient.status}>
-            {recipient.status === 'active' ? 'Active' : 'Archived'}
-          </Badge>
+          <Badge variant="status" value={recipient.status} />
         </div>
       </div>
 
@@ -981,7 +1138,21 @@ function RecipientDetail({ recipient }) {
       )}
 
       {/* Recent transfers */}
-      <PanelSection title="Transfers">
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-xs font-semibold uppercase tracking-widest text-content-tertiary">
+            Transfers
+          </div>
+          <Button
+            variant="text"
+            color="secondary"
+            size="xs"
+            className="cursor-pointer"
+            onClick={() => navigate('/transactions', { state: { filterRecipientId: recipient.id, filterRecipientLabel: recipient.name } })}
+          >
+            View all
+          </Button>
+        </div>
         {recentTransfers.length === 0 ? (
           <p className="text-sm text-content-tertiary">No transfers yet.</p>
         ) : (
@@ -1001,15 +1172,7 @@ function RecipientDetail({ recipient }) {
             ))}
           </div>
         )}
-        <div className="pt-3">
-          <button
-            onClick={() => navigate('/transactions')}
-            className="text-sm link cursor-pointer"
-          >
-            View all →
-          </button>
-        </div>
-      </PanelSection>
+      </div>
     </div>
   )
 }
@@ -1207,7 +1370,7 @@ function DeliveryRow({ delivery, expanded, onExpand }) {
 
       {expanded && delivery.payload && (
         <div className="px-6 pb-4 bg-surface-secondary border-b border-border-primary-light">
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-content-tertiary mb-2 pt-3">
+          <div className="text-xs font-semibold uppercase tracking-widest text-content-tertiary mb-2 pt-3">
             Payload Preview
           </div>
           <pre className="text-xs text-content-secondary bg-surface-primary border border-border-primary-light rounded-lg p-3 overflow-x-auto leading-relaxed whitespace-pre">
@@ -1217,6 +1380,293 @@ function DeliveryRow({ delivery, expanded, onExpand }) {
             View full payload →
           </button>
         </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Request Log panel ──────────────────────────────────────────────────────
+//
+// Shows the full detail of a single API request: request body (with syntax
+// highlighting), response, and a linked transaction if the response body
+// contains a `reference` field matching a transaction ID in the fixture.
+//
+// JSON syntax highlighting rationale:
+// A raw pre block with no highlighting puts all the cognitive load on the
+// developer to visually parse keys from values. Coloring keys, strings, numbers
+// and keywords separately makes the structure readable at a glance — the same
+// reason every code editor uses syntax highlighting. We implement a minimal
+// regex-based highlighter rather than a library: it handles our fixture data
+// correctly and avoids adding a parse-tree dependency to what is ultimately
+// a prototype display concern.
+
+// Chip color override pattern — same as Badge.jsx
+const RL_CHIP_OVERRIDES = {
+  success:     '!bg-feedback-success-light !border-feedback-success-border',
+  information: '!bg-feedback-information-light !border-feedback-information-border',
+  warning:     '!bg-feedback-warning-light !border-feedback-warning-border',
+  error:       '!bg-feedback-danger-light !border-feedback-danger-border',
+}
+
+function rlStatusColor(code) {
+  if (code >= 200 && code < 300) return 'success'
+  if (code === 401 || code >= 500) return 'error'
+  if (code >= 400) return 'warning'
+  return 'secondary'
+}
+
+const HTTP_STATUS_TEXT = {
+  200: 'OK',
+  201: 'Created',
+  400: 'Bad Request',
+  401: 'Unauthorized',
+  403: 'Forbidden',
+  404: 'Not Found',
+  500: 'Internal Server Error',
+  503: 'Service Unavailable',
+}
+
+// Escape HTML entities before applying syntax highlight patterns.
+// This prevents the JSON content from breaking the surrounding HTML if any
+// value happens to contain < > & characters.
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+// Apply syntax highlighting via inline styles so the colours work regardless
+// of whether Tailwind purges these generated class names in production.
+// Pattern order matters: keys before values, so colon-separated pairs parse cleanly.
+function syntaxHighlight(line) {
+  const escaped = escapeHtml(line)
+  return escaped
+    // Object keys: "key":
+    .replace(
+      /(&quot;[\w\s-]+&quot;)\s*:/g,
+      (_, key) => `<span style="color:#0f766e;font-weight:500">${key}</span>:`,
+    )
+    // String values: : "value"
+    .replace(
+      /:\s*(&quot;(?:[^&]|&[^q]|&q[^u]|&qu[^o]|&quo[^t])*?&quot;)/g,
+      (_, str) => `: <span style="color:#7c3aed">${str}</span>`,
+    )
+    // Number values: : 1234.56
+    .replace(
+      /:\s*(-?\d+\.?\d*)/g,
+      (_, num) => `: <span style="color:#0369a1">${num}</span>`,
+    )
+    // Keyword values: true | false | null
+    .replace(
+      /:\s*(true|false|null)\b/g,
+      (_, kw) => `: <span style="color:#0369a1;font-style:italic">${kw}</span>`,
+    )
+}
+
+// JsonBlock — formatted, optionally syntax-highlighted JSON with line limit + expand toggle.
+// maxLines defaults to 15 per spec; callers can override.
+function JsonBlock({ data, maxLines = 15, note }) {
+  const [expanded, setExpanded] = useState(false)
+  if (!data) return null
+  const json = JSON.stringify(data, null, 2)
+  const lines = json.split('\n')
+  const truncated = lines.length > maxLines && !expanded
+  const displayLines = truncated ? lines.slice(0, maxLines) : lines
+
+  return (
+    <div>
+      <pre className="bg-surface-secondary border border-border-primary-light rounded-lg p-3.5 text-xs font-mono leading-relaxed overflow-x-auto">
+        {displayLines.map((line, i) => (
+          <div
+            key={i}
+            dangerouslySetInnerHTML={{ __html: syntaxHighlight(line) }}
+          />
+        ))}
+        {truncated && (
+          <div style={{ color: '#9ca3af' }}>  ...</div>
+        )}
+      </pre>
+      <div className="flex items-center justify-between mt-1.5">
+        {lines.length > maxLines && (
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="text-xs text-content-secondary hover:text-content-primary transition-colors cursor-pointer"
+          >
+            {expanded ? 'Show less' : `Show full (${lines.length} lines)`}
+          </button>
+        )}
+        {note && lines.length <= maxLines && (
+          <p className="text-xs text-content-quaternary">{note}</p>
+        )}
+        {note && lines.length > maxLines && expanded && (
+          <p className="text-xs text-content-quaternary">{note}</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function RequestLogPanel({ id }) {
+  const { data: req, loading, error } = useRequestLogEntry(id)
+  if (loading) return <PanelSkeleton />
+  if (error || !req) return <p className="text-sm text-feedback-danger-main">Failed to load request.</p>
+  return <RequestLogDetail req={req} />
+}
+
+function RequestLogDetail({ req }) {
+  const navigate = useNavigate()
+  const { openPanel } = usePanelContext()
+  const statusColor = rlStatusColor(req.statusCode)
+  const statusText = HTTP_STATUS_TEXT[req.statusCode] ?? ''
+
+  // Linked transaction: if the response body has a `reference` field that
+  // matches a transaction ID in the fixture, surface it as a deep link.
+  // Rationale: POST /fx/v1/conversions returns a reference = the transaction ID.
+  // The request log entry and transaction are different records — one shows
+  // what was sent and how the API responded; the other shows what settled financially.
+  const linkedTxId = req.responseBody?.reference
+  const linkedTx = linkedTxId ? transactions.find((t) => t.id === linkedTxId) : null
+
+  // For successful conversion responses, show key fields only — not the full body.
+  // The conversion response has many fields; developers want to quickly confirm
+  // the reference, status, and amounts. Full body is available on expand.
+  const isConversionSuccess =
+    req.statusCode < 300 &&
+    req.responseBody?.reference &&
+    req.responseBody?.source_currency &&
+    req.responseBody?.converted_amount !== undefined
+
+  const displayResponseBody = isConversionSuccess
+    ? {
+        reference: req.responseBody.reference,
+        status: req.responseBody.status,
+        source_currency: req.responseBody.source_currency,
+        converted_amount: req.responseBody.converted_amount,
+        rate: req.responseBody.rate,
+      }
+    : req.responseBody
+
+  const isPost = req.method === 'POST'
+
+  return (
+    <div className="space-y-6">
+      {/* ── Header — ID as primary identity ───────────────────────── */}
+      <div>
+        <div className="font-mono text-sm font-medium text-content-primary leading-snug mb-1">
+          {req.id}
+        </div>
+        <div className="text-xs text-content-tertiary mb-3">
+          {formatDatetime(req.timestamp)}
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Method badge */}
+          <Chip
+            variant="status"
+            color={isPost ? 'information' : 'secondary'}
+            className={isPost ? RL_CHIP_OVERRIDES.information : ''}
+          >
+            {req.method}
+          </Chip>
+          {/* Status code badge */}
+          <Chip
+            variant="status"
+            color={statusColor}
+            className={RL_CHIP_OVERRIDES[statusColor] ?? ''}
+          >
+            {req.statusCode}
+          </Chip>
+        </div>
+      </div>
+
+      <div className="border-t border-border-primary-light" />
+
+      {/* ── Request metadata ──────────────────────────────────────── */}
+      <PanelSection label="Request">
+        <PanelRow label="Endpoint">
+          <span className="font-mono text-xs break-all">{req.path}</span>
+        </PanelRow>
+        <PanelRow label="Method">{req.method}</PanelRow>
+        <PanelRow label="Status">
+          {req.statusCode} {statusText}
+        </PanelRow>
+        <PanelRow label="Latency">
+          <span
+            className={
+              req.latencyMs > 600
+                ? 'text-feedback-danger-main font-medium'
+                : req.latencyMs >= 300
+                ? 'text-feedback-warning-dark font-medium'
+                : ''
+            }
+          >
+            {req.latencyMs}ms
+          </span>
+        </PanelRow>
+        <PanelRow label="IP address">
+          <span className="font-mono text-xs">{req.ipAddress}</span>
+        </PanelRow>
+        <PanelRow label="Timestamp">{formatDatetime(req.timestamp)}</PanelRow>
+      </PanelSection>
+
+      {/* ── Request body — only for POST requests ─────────────────── */}
+      {req.requestBody && (
+        <PanelSection label="Request Body">
+          <JsonBlock data={req.requestBody} maxLines={15} />
+        </PanelSection>
+      )}
+
+      {/* ── Response ──────────────────────────────────────────────── */}
+      <PanelSection label="Response">
+        <div className="mb-3">
+          <span
+            className={[
+              'text-sm font-semibold tabular-nums',
+              statusColor === 'success' ? 'text-feedback-success-dark' :
+              statusColor === 'error'   ? 'text-feedback-danger-main' :
+              statusColor === 'warning' ? 'text-feedback-warning-dark' :
+              'text-content-primary',
+            ].join(' ')}
+          >
+            {req.statusCode}
+          </span>
+          {statusText && (
+            <span className="text-sm text-content-secondary ml-1.5">{statusText}</span>
+          )}
+        </div>
+        <JsonBlock
+          data={displayResponseBody}
+          maxLines={15}
+          note={isConversionSuccess ? 'Showing key fields only.' : undefined}
+        />
+      </PanelSection>
+
+      {/* ── Linked transaction ─────────────────────────────────────── */}
+      {/* Only shown when the response `reference` field matches a known
+          transaction ID. Connects the API call to its financial outcome. */}
+      {linkedTx && (
+        <PanelSection label="Linked Transaction">
+          <div className="flex items-center justify-between gap-3 py-0.5">
+            <div className="min-w-0">
+              <div className="text-xs font-mono text-content-primary truncate">
+                {linkedTx.id}
+              </div>
+              <div className="text-xs text-content-tertiary mt-0.5">
+                {linkedTx.corridor} · {linkedTx.status}
+              </div>
+            </div>
+            <button
+              onClick={() =>
+                navigate('/transactions', {
+                  state: { openTransactionId: linkedTx.id },
+                })
+              }
+              className="text-xs text-action-primary-main hover:text-action-primary-dark font-medium cursor-pointer shrink-0 transition-colors"
+            >
+              View →
+            </button>
+          </div>
+        </PanelSection>
       )}
     </div>
   )

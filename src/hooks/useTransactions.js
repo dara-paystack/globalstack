@@ -10,7 +10,7 @@ import { useMode } from '../context/ModeContext'
 //
 // Returns { data, meta, loading, error, refetch } where meta contains:
 //   { total, nextCursor, hasNext, hasPrev, limit }
-export function useTransactions({ cursor = '', limit = 10, status = '', type = '' } = {}) {
+export function useTransactions({ cursor = '', limit = 10, status = '', type = '', accountId = '', recipientId = '' } = {}) {
   const { mode } = useMode()
   const [data, setData] = useState([])
   const [meta, setMeta] = useState({ total: 0, nextCursor: null, hasNext: false, hasPrev: false, limit: 10 })
@@ -27,6 +27,8 @@ export function useTransactions({ cursor = '', limit = 10, status = '', type = '
         ...(cursor && { cursor }),
         ...(status && { status }),
         ...(type && { type }),
+        ...(accountId && { accountId }),
+        ...(recipientId && { recipientId }),
       })
       const res = await fetch(`/api/transactions?${params}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -38,7 +40,7 @@ export function useTransactions({ cursor = '', limit = 10, status = '', type = '
     } finally {
       setLoading(false)
     }
-  }, [cursor, limit, status, type, mode])
+  }, [cursor, limit, status, type, accountId, recipientId, mode])
 
   useEffect(() => {
     fetchData()

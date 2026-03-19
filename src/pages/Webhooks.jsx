@@ -1,7 +1,14 @@
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { usePageTitle } from '../lib/usePageTitle'
-import { Skeleton, Alert, AlertDescription, AlertWarningIcon } from '@paystack/pax'
+import {
+  Skeleton, Alert, AlertDescription, AlertWarningIcon,
+  ModalDialog, ModalDialogContent, ModalDialogHeader, ModalDialogTitle,
+  ModalDialogDescription, ModalDialogFooter, ModalDialogClose,
+  Button,
+} from '@paystack/pax'
 import { Badge } from '../components/ui/Badge'
+import { PageHeader } from '../components/ui/PageHeader'
 import { ErrorState } from '../components/ui/ErrorState'
 import { AddEndpointModal } from '../components/ui/AddEndpointModal'
 import { usePanelContext } from '../context/PanelContext'
@@ -13,8 +20,18 @@ export default function Webhooks() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
+  // deleteTarget: the webhook id awaiting delete confirmation, or null
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const { openPanel, panelState } = usePanelContext()
+  const location = useLocation()
+
+  // Pre-open a specific webhook's detail panel when navigating here from
+  // the "Needs attention" section on Overview.
+  useEffect(() => {
+    const id = location.state?.openWebhookId
+    if (id) openPanel('webhook', id)
+  }, [location.state?.openWebhookId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadWebhooks() {
     setLoading(true)
@@ -41,18 +58,51 @@ export default function Webhooks() {
       setWebhooks((prev) => prev.filter((w) => w.id !== id))
     } catch {
       // Silent fail in prototype — real app would show toast
+    } finally {
+      setDeleteTarget(null)
     }
   }
 
   // Aggregate failure count and find the first failing endpoint for the "View details" link.
-  // Computed from loaded webhooks — not derived inside the map so it stays available even
-  // when the Add Endpoint form is open and the endpoint rows are visually below the form.
   const totalFailed = webhooks.reduce((sum, wh) => sum + (wh.deliverySummary?.failed ?? 0), 0)
   const firstFailingWebhook = webhooks.find((wh) => (wh.deliverySummary?.failed ?? 0) > 0)
 
+  const deleteTargetWebhook = webhooks.find((w) => w.id === deleteTarget)
+
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-content-primary leading-snug">Webhooks</h1>
+    <div className="space-y-8">
+      {/* Page header — no filters on Webhooks. "Add endpoint" is the primary action.
+          Per the universal pattern, no Filter button is shown when there are no filters. */}
+      <PageHeader
+        title="Webhooks"
+        subtitle="Receive real-time notifications for events in your account."
+        primaryAction={{ label: '+ Add endpoint', onClick: () => setShowAddModal(true) }}
+      />
+
+      {/* Delete confirmation dialog — controlled by deleteTarget state. */}
+      <ModalDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+        <ModalDialogContent showCloseButton={false}>
+          <ModalDialogHeader>
+            <ModalDialogTitle>Delete webhook endpoint?</ModalDialogTitle>
+            <ModalDialogDescription>
+              {deleteTargetWebhook && (
+                <span className="font-mono text-xs break-all">{deleteTargetWebhook.url}</span>
+              )}
+              <span className="block mt-1">
+                This endpoint will stop receiving events immediately. This cannot be undone.
+              </span>
+            </ModalDialogDescription>
+          </ModalDialogHeader>
+          <ModalDialogFooter>
+            <ModalDialogClose asChild>
+              <Button variant="outline" color="secondary">Cancel</Button>
+            </ModalDialogClose>
+            <Button variant="default" color="error" onClick={() => handleDelete(deleteTarget)}>
+              Delete endpoint
+            </Button>
+          </ModalDialogFooter>
+        </ModalDialogContent>
+      </ModalDialog>
 
       {/* Page-level failure banner — sits above the card so it stays visible even when the
           Add Endpoint form is open. A single banner covers all failing endpoints rather than
@@ -75,28 +125,22 @@ export default function Webhooks() {
       )}
 
       <div className="bg-surface-primary border border-border-primary-light rounded-xl overflow-hidden">
-        {/* Card header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border-primary-light">
+        {/* Card section label — button moved to page header */}
+        <div className="px-5 py-3.5 border-b border-border-primary-light">
           <h2 className="text-xs font-medium uppercase tracking-wide text-content-tertiary">
             Endpoints
           </h2>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-action-primary-main text-content-inverse text-sm font-medium hover:bg-action-primary-dark transition-colors cursor-pointer"
-          >
-            <span className="text-base leading-none">+</span>
-            Add endpoint
-          </button>
         </div>
 
         {/* Endpoint table */}
         <table className="w-full">
           <thead>
             <tr className="border-b border-border-primary-light bg-surface-secondary">
+              {/* Mobile: Endpoint + Status + actions. Events + Deliveries hidden (in panel). */}
               <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">Endpoint</th>
               <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">Status</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">Events</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">Deliveries</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary hidden md:table-cell">Events</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary hidden md:table-cell">Deliveries</th>
               <th className="px-4 py-2.5" />
             </tr>
           </thead>
@@ -146,8 +190,8 @@ export default function Webhooks() {
                       <Badge variant="status" value={wh.status} />
                     </td>
 
-                    {/* Subscribed events */}
-                    <td className="px-4 py-3">
+                    {/* Subscribed events — hidden on mobile */}
+                    <td className="px-4 py-3 hidden md:table-cell">
                       <div className="flex flex-wrap gap-1">
                         {wh.events.map((event) => (
                           <span
@@ -160,8 +204,8 @@ export default function Webhooks() {
                       </div>
                     </td>
 
-                    {/* Deliveries + last delivery beneath */}
-                    <td className="px-4 py-3">
+                    {/* Deliveries + last delivery — hidden on mobile */}
+                    <td className="px-4 py-3 hidden md:table-cell">
                       <div className="text-sm text-content-primary tabular-nums">
                         {summary.total}
                         {summary.failed > 0 && (
@@ -184,7 +228,7 @@ export default function Webhooks() {
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(wh.id)}
+                        onClick={() => setDeleteTarget(wh.id)}
                         className="text-sm text-feedback-danger-main hover:text-feedback-danger-dark cursor-pointer transition-colors ml-3"
                       >
                         Delete

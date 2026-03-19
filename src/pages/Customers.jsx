@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { usePageTitle } from '../lib/usePageTitle'
-import { Skeleton, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@paystack/pax'
+import { Skeleton } from '@paystack/pax'
 import { useCustomers } from '../hooks/useCustomers'
 import { usePanelContext } from '../context/PanelContext'
+import { useSearch } from '../context/SearchContext'
 import { Badge } from '../components/ui/Badge'
+import { PageHeader } from '../components/ui/PageHeader'
 import { ErrorState } from '../components/ui/ErrorState'
 import { formatUSDC, formatDate } from '../lib/format'
 
@@ -48,6 +50,7 @@ export default function Customers() {
     kycStatus: fromKycSelect(kycFilter),
   })
   const { panelState, openPanel } = usePanelContext()
+  const { addRecentItem } = useSearch()
   const location = useLocation()
 
   // Open a specific customer's panel when arriving via a customer link
@@ -59,50 +62,32 @@ export default function Customers() {
     }
   }, [location.state?.openCustomerId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleKycFilter = useCallback((value) => {
+  const applyKycFilter = useCallback((value) => {
     setKycFilter(value)
   }, [])
-
-  function clearFilters() {
-    setKycFilter('all')
-  }
 
   // Hide Created column when panel is open — recoverable in the panel's Profile section.
   const panelOpen = panelState.type === 'customer'
   const filtersActive = fromKycSelect(kycFilter) !== ''
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-content-primary leading-snug">Customers</h1>
-        <div className="flex items-center gap-2">
-          <Select value={kycFilter} onValueChange={handleKycFilter}>
-            <SelectTrigger className="w-52 text-sm">
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              {KYC_FILTER_OPTIONS.map((opt) =>
-                opt.group === 'separator' ? (
-                  <div key={opt.value} className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-content-quaternary select-none">
-                    {opt.label}
-                  </div>
-                ) : (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                )
-              )}
-            </SelectContent>
-          </Select>
+  const filters = [
+    {
+      id: 'kycStatus',
+      label: 'KYC Status',
+      options: KYC_FILTER_OPTIONS,
+      value: kycFilter,
+      defaultValue: 'all',
+      onChange: applyKycFilter,
+    },
+  ]
 
-          {filtersActive && (
-            <button
-              onClick={clearFilters}
-              className="text-sm text-action-primary-main hover:text-action-primary-dark font-medium cursor-pointer"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      </div>
+  return (
+    <div className="space-y-8">
+      <PageHeader
+        title="Customers"
+        subtitle="Manage your customers and their KYC status."
+        filters={filters}
+      />
 
       <div className="bg-surface-primary border border-border-primary-light rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
@@ -127,7 +112,7 @@ export default function Customers() {
                 {filtersActive ? 'No customers match this KYC status.' : 'No customers yet.'}
               </p>
               {filtersActive && (
-                <button onClick={clearFilters} className="mt-3 text-sm text-action-primary-main hover:text-action-primary-dark cursor-pointer">
+                <button onClick={() => applyKycFilter('all')} className="mt-3 text-sm text-action-primary-main hover:text-action-primary-dark cursor-pointer">
                   Clear filter
                 </button>
               )}
@@ -136,13 +121,14 @@ export default function Customers() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border-primary-light bg-surface-secondary">
+                  {/* Mobile: Name + KYC Status + Balance. Type, Country, Created hidden. */}
                   <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
                     Name
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary hidden md:table-cell">
                     Type
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary hidden md:table-cell">
                     Country
                   </th>
                   <th className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
@@ -151,9 +137,9 @@ export default function Customers() {
                   <th className="px-4 py-2.5 text-right text-xs font-medium text-content-tertiary">
                     Balance
                   </th>
-                  {/* Created hidden when panel open — visible in panel Profile section */}
+                  {/* Created hidden on mobile AND when panel open */}
                   {!panelOpen && (
-                    <th className="px-4 py-2.5 text-right text-xs font-medium text-content-tertiary">
+                    <th className="px-4 py-2.5 text-right text-xs font-medium text-content-tertiary hidden md:table-cell">
                       Created
                     </th>
                   )}
@@ -166,8 +152,8 @@ export default function Customers() {
                   return (
                     <tr
                       key={customer.id}
-                      onClick={() => openPanel('customer', customer.id)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel('customer', customer.id) } }}
+                      onClick={() => { openPanel('customer', customer.id); addRecentItem('customer', customer.id) }}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel('customer', customer.id); addRecentItem('customer', customer.id) } }}
                       tabIndex={0}
                       className={[
                         'cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary-main focus-visible:ring-inset',
@@ -182,14 +168,14 @@ export default function Customers() {
                           {customer.id}
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 hidden md:table-cell">
                         <Badge variant="type" value={customer.type} />
                       </td>
-                      <td className="px-4 py-3 text-sm text-content-secondary">
+                      <td className="px-4 py-3 text-sm text-content-secondary hidden md:table-cell">
                         {COUNTRY_NAMES[customer.country] ?? customer.country}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant="status" value={customer.kycStatus} />
+                        <Badge variant="status" value={customer.kycStatus} context="kyc" />
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums text-sm font-medium text-content-primary">
                         {customer.balance > 0
@@ -197,7 +183,7 @@ export default function Customers() {
                           : <span className="text-content-quaternary font-normal">—</span>}
                       </td>
                       {!panelOpen && (
-                        <td className="px-4 py-3 text-right text-sm text-content-tertiary whitespace-nowrap">
+                        <td className="px-4 py-3 text-right text-sm text-content-tertiary whitespace-nowrap hidden md:table-cell">
                           {formatDate(customer.createdAt)}
                         </td>
                       )}

@@ -8,8 +8,9 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Chip, Skeleton, Button, TextInput, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@paystack/pax'
-import { X } from 'lucide-react'
+import { X, UserPlus, Shield } from 'lucide-react'
 import { Badge } from '../components/ui/Badge'
+import { PageHeader } from '../components/ui/PageHeader'
 import { ErrorState } from '../components/ui/ErrorState'
 import { formatDate, formatRelative } from '../lib/format'
 import { usePageTitle } from '../lib/usePageTitle'
@@ -32,6 +33,7 @@ const PERMISSIONS = [
   { label: 'Customers',    admin: true,  developer: true,  finance: true  },
   { label: 'API Key',      admin: true,  developer: true,  finance: false },
   { label: 'Webhooks',     admin: true,  developer: true,  finance: false },
+  { label: 'Request Log',  admin: true,  developer: true,  finance: false },
   { label: 'Audit Log',    admin: true,  developer: false, finance: false },
   { label: 'Team',         admin: true,  developer: false, finance: false },
 ]
@@ -395,7 +397,7 @@ function MemberRow({ member }) {
                 {member.name}
               </span>
               {isCurrentUser && (
-                <Chip variant="status" color="secondary" className="text-[10px] !px-1.5 !py-0">
+                <Chip variant="status" color="secondary" className="text-xs !px-1.5 !py-0">
                   You
                 </Chip>
               )}
@@ -414,11 +416,11 @@ function MemberRow({ member }) {
           {ROLE_LABEL[member.role]}
         </Badge>
       </td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3 hidden md:table-cell">
         <Badge variant="status" value={member.status} />
       </td>
-      <td className="px-4 py-3 text-sm">{lastActive}</td>
-      <td className="px-4 py-3 text-sm">{joined}</td>
+      <td className="px-4 py-3 text-sm hidden md:table-cell">{lastActive}</td>
+      <td className="px-4 py-3 text-sm hidden md:table-cell">{joined}</td>
     </tr>
   )
 }
@@ -430,15 +432,18 @@ function TeamSkeleton() {
   return (
     <div className="border border-border-primary-light rounded-xl overflow-hidden">
       <div className="bg-surface-secondary border-b border-border-primary-light">
-        <div className="grid grid-cols-5 gap-4 px-4 py-2.5">
-          {['Member', 'Role', 'Status', 'Last active', 'Joined'].map((col) => (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 px-4 py-2.5">
+          {['Member', 'Role'].map((col) => (
             <div key={col} className="text-xs font-medium text-content-tertiary">{col}</div>
+          ))}
+          {['Status', 'Last active', 'Joined'].map((col) => (
+            <div key={col} className="text-xs font-medium text-content-tertiary hidden md:block">{col}</div>
           ))}
         </div>
       </div>
       {[...Array(5)].map((_, i) => (
         <div key={i} className="px-4 py-3 border-b border-border-primary-light last:border-0">
-          <div className="grid grid-cols-5 gap-4 items-center">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 items-center">
             <div className="flex items-center gap-3">
               <Skeleton className="w-8 h-8 rounded-full shrink-0" />
               <div className="space-y-1.5 flex-1">
@@ -447,9 +452,9 @@ function TeamSkeleton() {
               </div>
             </div>
             <Skeleton className="h-5 w-16 rounded-full" />
-            <Skeleton className="h-5 w-14 rounded-full" />
-            <Skeleton className="h-3 w-16 rounded" />
-            <Skeleton className="h-3 w-20 rounded" />
+            <Skeleton className="h-5 w-14 rounded-full hidden md:block" />
+            <Skeleton className="h-3 w-16 rounded hidden md:block" />
+            <Skeleton className="h-3 w-20 rounded hidden md:block" />
           </div>
         </div>
       ))}
@@ -489,24 +494,24 @@ export default function Team() {
       {showInvite      && <InviteModal      onClose={() => setShowInvite(false)} />}
       {showPermissions && <PermissionsModal onClose={() => setShowPermissions(false)} />}
 
-      <div className="space-y-6">
-        {/* Page header row — title/subtitle left, action buttons right, all center-aligned */}
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-medium text-content-primary">Team</h1>
-            <p className="text-sm text-content-tertiary mt-0.5">
-              People with access to this dashboard.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Button variant="outline" color="secondary" size="sm" onClick={() => setShowPermissions(true)}>
-              Role permissions
-            </Button>
-            <Button variant="default" color="primary" size="sm" onClick={() => setShowInvite(true)}>
-              Invite member
-            </Button>
-          </div>
-        </div>
+      <div className="space-y-8">
+        {/* Page header — no filters on Team. Two action buttons: secondary (Role
+            permissions) and primary (Invite member). Per the universal pattern,
+            secondary appears to the left of primary. */}
+        <PageHeader
+          title="Team"
+          subtitle="People with access to this dashboard."
+          secondaryAction={{
+            label: 'Role permissions',
+            icon: <Shield size={14} strokeWidth={2} />,
+            onClick: () => setShowPermissions(true),
+          }}
+          primaryAction={{
+            label: 'Invite member',
+            icon: <UserPlus size={14} strokeWidth={2} />,
+            onClick: () => setShowInvite(true),
+          }}
+        />
 
         {/* Content */}
         {error ? (
@@ -518,8 +523,14 @@ export default function Team() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-surface-secondary border-b border-border-primary-light">
-                  {['Member', 'Role', 'Status', 'Last active', 'Joined'].map((col) => (
+                  {/* Mobile: Member + Role only. Status, Last active, Joined hidden. */}
+                  {['Member', 'Role'].map((col) => (
                     <th key={col} className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary">
+                      {col}
+                    </th>
+                  ))}
+                  {['Status', 'Last active', 'Joined'].map((col) => (
+                    <th key={col} className="px-4 py-2.5 text-left text-xs font-medium text-content-tertiary hidden md:table-cell">
                       {col}
                     </th>
                   ))}

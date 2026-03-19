@@ -143,7 +143,7 @@ export default function ApiKey() {
   const deniedList = ALL_PERMISSIONS.filter((p) => !grantedSet.has(p))
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
 
       {/* ── Toast ─────────────────────────────────────────────────────────────
           Fixed at bottom-right of the viewport. Always in the DOM, but invisible
@@ -169,7 +169,7 @@ export default function ApiKey() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="col-span-2 space-y-4">
             {[0, 1].map((i) => (
               <div
@@ -198,7 +198,7 @@ export default function ApiKey() {
       ) : error ? (
         <p className="text-sm text-feedback-danger-main">{error}</p>
       ) : (
-        <div className="grid grid-cols-3 gap-6 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
 
           {/* ── Left column: Secret key + Usage ─────────────────────────────── */}
           <div className="col-span-2 space-y-6">
@@ -210,7 +210,7 @@ export default function ApiKey() {
                   <h2 className="text-xs font-medium uppercase tracking-wide text-content-tertiary">
                     Secret key
                   </h2>
-                  <Badge variant="status" value={data.status}>Active</Badge>
+                  <Badge variant="status" value={data.status} />
                 </div>
                 <span className="text-xs text-content-tertiary">
                   Created {formatDate(data.created)}
@@ -258,23 +258,23 @@ export default function ApiKey() {
 
               {/* Three stat cells — divided horizontally, no card overhead per cell */}
               <div className="grid grid-cols-3 divide-x divide-border-primary-light">
-                <div className="px-5 py-4">
+                <div className="px-3 md:px-5 py-4">
                   <p className="text-xs font-medium text-content-tertiary mb-2">
                     Requests today
                   </p>
-                  <p className="text-2xl font-semibold text-content-primary tabular-nums leading-none">
+                  <p className="text-xl md:text-2xl font-semibold text-content-primary tabular-nums leading-none">
                     {data.requestsToday.toLocaleString()}
                   </p>
                 </div>
 
-                <div className="px-5 py-4">
+                <div className="px-3 md:px-5 py-4">
                   <p className="text-xs font-medium text-content-tertiary mb-2">
                     Errors today
                   </p>
                   {/* Color = status: red if errors exist, muted gray if clean.
                       This is the one place on the page where color carries meaning. */}
                   <p
-                    className={`text-2xl font-semibold tabular-nums leading-none ${
+                    className={`text-xl md:text-2xl font-semibold tabular-nums leading-none ${
                       data.errorsToday > 0
                         ? 'text-feedback-danger-main'
                         : 'text-content-tertiary'
@@ -284,11 +284,11 @@ export default function ApiKey() {
                   </p>
                 </div>
 
-                <div className="px-5 py-4">
+                <div className="px-3 md:px-5 py-4">
                   <p className="text-xs font-medium text-content-tertiary mb-2">
                     Total requests
                   </p>
-                  <p className="text-2xl font-semibold text-content-primary tabular-nums leading-none">
+                  <p className="text-xl md:text-2xl font-semibold text-content-primary tabular-nums leading-none">
                     {data.totalRequests.toLocaleString()}
                   </p>
                 </div>

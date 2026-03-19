@@ -1,6 +1,8 @@
-import { createBrowserRouter, RouterProvider, useRouteError, useNavigate } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Navigate, useRouteError, useNavigate } from 'react-router-dom'
 import { ModeProvider } from './context/ModeContext'
 import { PanelProvider } from './context/PanelContext'
+import { SearchProvider } from './context/SearchContext'
+import { SidebarProvider } from './context/SidebarContext'
 import { AppShell } from './components/layout/AppShell'
 
 // Rendered by React Router when any page throws during render or data loading.
@@ -38,6 +40,7 @@ import ApiKey from './pages/ApiKey'
 import Webhooks from './pages/Webhooks'
 import AuditLog from './pages/AuditLog'
 import Team from './pages/Team'
+import RequestLog from './pages/RequestLog'
 
 // createBrowserRouter defines the full route tree.
 // AppShell is a layout route (no path) — it renders the sidebar/topbar and
@@ -53,9 +56,14 @@ const router = createBrowserRouter([
       { path: '/recipients', element: <Recipients /> },
       { path: '/customers', element: <Customers /> },
       { path: '/settings/api-key', element: <ApiKey /> },
-      { path: '/settings/webhooks', element: <Webhooks /> },
       { path: '/settings/audit-log', element: <AuditLog /> },
       { path: '/settings/team', element: <Team /> },
+      // DEVELOPER section routes
+      { path: '/developer/webhooks', element: <Webhooks /> },
+      { path: '/developer/request-log', element: <RequestLog /> },
+      // Redirect old Webhooks route so existing bookmarks and deep-links still work.
+      // `replace` prevents the old path from cluttering browser history.
+      { path: '/settings/webhooks', element: <Navigate to="/developer/webhooks" replace /> },
     ],
   },
 ])
@@ -65,10 +73,16 @@ export default function App() {
     // PanelProvider wraps ModeProvider so both are accessible in all routes.
     // PanelContext must be above the Router so AppShell (inside the router)
     // and page components can both read from the same context instance.
-    <PanelProvider>
-      <ModeProvider>
-        <RouterProvider router={router} />
-      </ModeProvider>
-    </PanelProvider>
+    // SidebarProvider wraps everything so Sidebar, MobileTopBar, and AppShell
+    // can all read sidebar open/closed state from the same context instance.
+    <SidebarProvider>
+      <PanelProvider>
+        <ModeProvider>
+          <SearchProvider>
+            <RouterProvider router={router} />
+          </SearchProvider>
+        </ModeProvider>
+      </PanelProvider>
+    </SidebarProvider>
   )
 }
