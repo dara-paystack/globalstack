@@ -12,6 +12,7 @@
 
 import { useState } from 'react'
 import { X } from 'lucide-react'
+import { TextInput } from '@paystack/pax'
 
 const ALL_EVENTS = ['CONVERSION', 'TRANSFER', 'INDEXED_DEPOSIT', 'KYC_UPDATE']
 
@@ -77,14 +78,14 @@ export function AddEndpointModal({ onClose, onSuccess }) {
               <label className="block text-sm font-medium text-content-primary mb-1.5">
                 Endpoint URL
               </label>
-              <input
+              <TextInput
                 type="url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="https://api.yourapp.com/webhooks"
                 required
                 autoFocus
-                className="w-full border border-border-primary-main rounded-lg px-3 py-2 text-sm text-content-primary placeholder:text-content-quaternary bg-surface-primary focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:border-action-primary-main"
+                className="w-full"
               />
               <p className="mt-1.5 text-xs text-content-tertiary">
                 Must be publicly accessible and respond with a 2xx status.

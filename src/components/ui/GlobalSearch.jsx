@@ -290,7 +290,7 @@ function ResultRow({ result, isFocused, onClick, onMouseEnter }) {
   return (
     <button
       type="button"
-      className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors duration-75 ${
+      className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors duration-75 cursor-pointer ${
         isFocused ? 'bg-surface-secondary' : 'hover:bg-surface-secondary'
       }`}
       onClick={onClick}
@@ -463,16 +463,12 @@ export function GlobalSearch() {
   // Build the results sections for rendering
   function renderResultSections() {
     if (!searchResults) {
-      // Recent items state
-      if (recentItems.length === 0) return null
-      const recentResults = recentItems
-        .map((item) => lookupRecentResult(item.type, item.id))
-        .filter(Boolean)
-      if (recentResults.length === 0) return null
+      // flatResults already contains looked-up recent items
+      if (flatResults.length === 0) return null
       return (
         <>
           <GroupHeader label="Recent" isFirst />
-          {recentResults.map((result, i) => (
+          {flatResults.map((result, i) => (
             <div key={result.id} data-result-row>
               <ResultRow
                 result={result}

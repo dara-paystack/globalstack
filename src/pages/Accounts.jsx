@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { usePageTitle } from '../lib/usePageTitle'
 import {
-  Skeleton, Button,
+  Skeleton, Button, TextInput,
   Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@paystack/pax'
@@ -391,12 +391,12 @@ export default function Accounts() {
 
         {/* Controls row: search left, Filter button right */}
         <div className="flex items-center gap-3 mb-3">
-          <input
+          <TextInput
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by account or customer…"
-            className="h-9 w-64 px-3 text-sm bg-surface-primary border border-border-primary-light rounded-lg text-content-primary placeholder:text-content-quaternary focus:outline-none focus:ring-2 focus:ring-action-primary/20 focus:border-action-primary"
+            className="h-9 w-64 text-sm"
           />
           <SectionFilter typeFilter={typeFilter} onApply={handleTypeFilter} />
         </div>
@@ -590,7 +590,7 @@ function CustomerAccountRow({ acc, panelState, panelOpen, onOpen }) {
         <td className="px-4 py-3">
           <button
             onClick={handleCustomerClick}
-            className="text-sm link text-left"
+            className="text-sm link text-left cursor-pointer"
           >
             {acc.customer}
           </button>

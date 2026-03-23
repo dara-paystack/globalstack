@@ -53,7 +53,7 @@ export function useRecipient(id) {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!id) return
+    if (!id) { setLoading(false); return }
     setLoading(true)
     setError(null)
     fetch(`/api/recipients/${id}`)

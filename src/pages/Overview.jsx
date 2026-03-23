@@ -126,26 +126,19 @@ export default function Overview() {
     customerAccounts.filter((a) => a.customerId).map((a) => a.customerId),
   ).size;
 
-  const recentTxns = txns.slice(0, 5);
-
   // Alert items: derived synchronously from fixture imports — no loading state needed.
   // buildAlertItems is called every render; fixtures are in-memory, cost is negligible.
   const alertItems = buildAlertItems(navigate);
 
   // Card border reflects the most severe category present, providing peripheral
   // urgency awareness even before the operator reads the card.
-  const hasCritical = alertItems.some(i => i.category === 'failed_txn');
   // api_error (especially 401/500) is urgent — integration may be broken.
-  // Treat same as webhook failures for severity colouring.
-  const hasUrgent   = hasCritical || alertItems.some(i =>
-    i.category === 'webhook' || i.category === 'api_error' || i.category === 'kyc_blocked',
+  const hasUrgent = alertItems.some(i =>
+    i.category === 'failed_txn' || i.category === 'webhook' ||
+    i.category === 'api_error' || i.category === 'kyc_blocked',
   );
-  const alertCardBorder = hasCritical || hasUrgent
-    ? 'border-feedback-warning-border'
-    : 'border-border-primary-light';
-  const alertCardBg = hasCritical || hasUrgent
-    ? 'bg-feedback-warning-light'
-    : 'bg-surface-primary';
+  const alertCardBorder = hasUrgent ? 'border-feedback-warning-border' : 'border-border-primary-light';
+  const alertCardBg = hasUrgent ? 'bg-feedback-warning-light' : 'bg-surface-primary';
 
   // Show the 5 most recent items in the card; the rest live in the panel.
   const visibleAlertItems = alertItems.slice(0, 5)
@@ -365,7 +358,7 @@ export default function Overview() {
                 </div>
               ))}
             </div>
-          ) : recentTxns.length === 0 ? (
+          ) : txns.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <p className="text-sm text-content-tertiary">
                 No transactions yet.
@@ -386,7 +379,7 @@ export default function Overview() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-primary-light">
-                {recentTxns.map((txn) => (
+                {txns.map((txn) => (
                   // tabIndex={0} + onKeyDown: makes the row reachable and activatable
                   // by keyboard. Without this, keyboard users can never open the panel.
                   // Enter and Space are the standard keys for activating interactive elements.

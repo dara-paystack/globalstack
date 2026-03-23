@@ -157,7 +157,7 @@ function InviteModal({ onClose }) {
               <span className="font-medium text-content-secondary">{form.email}</span>.
             </p>
           </div>
-          <Button variant="default" color="primary" onClick={onClose} className="mt-2">
+          <Button variant="default" color="primary" onClick={onClose} className="mt-2 cursor-pointer">
             Done
           </Button>
         </div>
@@ -173,7 +173,7 @@ function InviteModal({ onClose }) {
           <h2 className="text-base font-semibold text-content-primary">Invite team member</h2>
           <p className="text-xs text-content-tertiary mt-0.5">They'll receive an email invitation to join.</p>
         </div>
-        <Button variant="ghost" color="secondary" size="sm" onClick={onClose} aria-label="Close" className="!size-8 !p-0">
+        <Button variant="ghost" color="secondary" size="sm" onClick={onClose} aria-label="Close" className="!size-8 !p-0 cursor-pointer">
           <X size={16} />
         </Button>
       </div>
@@ -271,10 +271,10 @@ function InviteModal({ onClose }) {
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border-primary-light">
-          <Button type="button" variant="outline" color="secondary" onClick={onClose}>
+          <Button type="button" variant="outline" color="secondary" onClick={onClose} className="cursor-pointer">
             Cancel
           </Button>
-          <Button type="submit" variant="default" color="primary">
+          <Button type="submit" variant="default" color="primary" className="cursor-pointer">
             Send invite
           </Button>
         </div>
@@ -299,7 +299,7 @@ function PermissionsModal({ onClose }) {
           <h2 className="text-base font-semibold text-content-primary">Role permissions</h2>
           <p className="text-xs text-content-tertiary mt-0.5">What each role can access in this dashboard.</p>
         </div>
-        <Button variant="ghost" color="secondary" size="sm" onClick={onClose} aria-label="Close" className="!size-8 !p-0">
+        <Button variant="ghost" color="secondary" size="sm" onClick={onClose} aria-label="Close" className="!size-8 !p-0 cursor-pointer">
           <X size={16} />
         </Button>
       </div>

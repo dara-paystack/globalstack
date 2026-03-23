@@ -57,13 +57,9 @@ export function AppShell() {
   const location = useLocation()
   const { isTestMode } = useMode()
 
-  // Close detail panel on route change.
+  // Close detail panel and sidebar on route change.
   useEffect(() => {
     closePanel()
-  }, [location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Close mobile sidebar on route change (navigating away should restore layout).
-  useEffect(() => {
     closeMobileSidebar()
     closeTabletExpanded()
   }, [location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps

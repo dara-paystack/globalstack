@@ -23,8 +23,10 @@
 //   Parent renders with a key={preselectedAccountId ?? 'generic'} for fresh instances.
 //
 import { useState, useEffect, useRef } from 'react'
-import { X, Check, ChevronDown, Info, CircleAlert } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { X, Check, Info } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, TextInput } from '@paystack/pax'
 import { useAccounts } from '../../hooks/useAccounts'
 import { useCustomers } from '../../hooks/useCustomers'
 import { useRecipients } from '../../hooks/useRecipients'
@@ -106,6 +108,7 @@ export function SendFundsModal({ open, onClose, preselectedAccountId }) {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [createdTransfer, setCreatedTransfer] = useState(null)
+  const [submitError, setSubmitError] = useState(null)
   const [showComingSoon, setShowComingSoon] = useState(false)
 
   // All accounts — filter to merchant-owned client-side (same as Overview pattern)
@@ -139,6 +142,7 @@ export function SendFundsModal({ open, onClose, preselectedAccountId }) {
   async function handleConfirm() {
     if (!selectedAccount || !selectedRecipient || !formData.amount) return
     setIsSubmitting(true)
+    setSubmitError(null)
 
     try {
       const payload = {
@@ -164,7 +168,7 @@ export function SendFundsModal({ open, onClose, preselectedAccountId }) {
       const transfer = await res.json()
       setCreatedTransfer(transfer)
     } catch (err) {
-      console.error('Transfer failed:', err)
+      setSubmitError('Transfer failed. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -237,7 +241,11 @@ export function SendFundsModal({ open, onClose, preselectedAccountId }) {
 
   if (!open) return null
 
-  return (
+  // Portal renders the modal at document.body level so it's never clipped
+  // by overflow:hidden on ancestors (e.g. GlobalPanel). position:fixed is
+  // nominally viewport-relative, but browsers can trap it inside composited
+  // layers — portalling out is the reliable fix for modals triggered from panels.
+  return createPortal(
     // Backdrop — full screen, dark overlay. Click outside to close.
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
@@ -341,7 +349,11 @@ export function SendFundsModal({ open, onClose, preselectedAccountId }) {
             (Cancel = abort, Continue = commit). The primary action always
             lives at the bottom-right — users build a spatial habit quickly. */}
         {!createdTransfer && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-border-primary-light shrink-0">
+          <div className="border-t border-border-primary-light shrink-0">
+            {submitError && (
+              <p className="px-6 pt-3 text-xs text-feedback-danger-main">{submitError}</p>
+            )}
+            <div className="flex items-center justify-between px-6 py-4">
             <div>
               {step > 1 && (
                 <button
@@ -381,10 +393,12 @@ export function SendFundsModal({ open, onClose, preselectedAccountId }) {
                 </button>
               )}
             </div>
+            </div>
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -421,7 +435,7 @@ function Step1SelectSource({ accounts, loading, selectedId, onSelect }) {
                 className={[
                   'w-full flex items-center justify-between px-4 py-3.5 rounded-xl border text-left transition-colors',
                   isSelected
-                    ? 'border-action-primary-main bg-feedback-information-light'
+                    ? 'border-action-primary-main bg-feedback-information-light cursor-pointer'
                     : hasBalance
                     ? 'border-border-primary-light hover:border-border-primary-dark hover:bg-surface-secondary cursor-pointer'
                     : 'border-border-primary-light bg-surface-secondary cursor-not-allowed opacity-50',
@@ -501,28 +515,28 @@ function Step2SelectRecipient({
     <div>
       {/* Customer selector */}
       <div className="mb-5">
-        <label htmlFor="send-funds-customer" className="text-sm font-medium text-content-primary mb-2 block">
+        <label className="text-sm font-medium text-content-primary mb-2 block">
           Customer
         </label>
         {customersLoading ? (
           <div className="h-11 rounded-xl bg-surface-secondary animate-pulse" />
         ) : (
-          <div className="relative">
-            <select
-              id="send-funds-customer"
-              value={selectedCustomerId ?? ''}
-              onChange={(e) => onSelectCustomer(e.target.value || null)}
-              className="w-full h-11 pl-3.5 pr-9 text-sm rounded-xl border border-border-primary-main bg-surface-primary text-content-primary appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-action-primary-main transition-colors"
-            >
-              <option value="">Select a customer…</option>
+          <Select
+            value={selectedCustomerId ?? 'none'}
+            onValueChange={(val) => onSelectCustomer(val === 'none' ? null : val)}
+          >
+            <SelectTrigger className="w-full text-sm cursor-pointer">
+              <SelectValue placeholder="Select a customer…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Select a customer…</SelectItem>
               {customers.map((c) => (
-                <option key={c.id} value={c.id}>
+                <SelectItem key={c.id} value={c.id}>
                   {c.name}
-                </option>
+                </SelectItem>
               ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary" width={10} height={10} strokeWidth={1.25} />
-          </div>
+            </SelectContent>
+          </Select>
         )}
       </div>
 
@@ -671,7 +685,7 @@ function Step3EnterAmount({
               $
             </span>
           )}
-          <input
+          <TextInput
             id="send-funds-amount"
             type="number"
             min="0"
@@ -680,10 +694,8 @@ function Step3EnterAmount({
             onChange={(e) => onAmountChange(e.target.value)}
             placeholder="0.00"
             className={[
-              'w-full h-11 text-sm rounded-xl border border-border-primary-main bg-surface-primary text-content-primary',
-              'focus:outline-none focus:ring-1 focus:ring-action-primary-main transition-colors',
-              'tabular-nums',
-              sourceAccount.currency === 'USD' ? 'pl-7 pr-3.5' : 'px-3.5',
+              'w-full tabular-nums',
+              sourceAccount.currency === 'USD' ? 'pl-7 pr-3.5' : '',
             ].join(' ')}
           />
           {sourceAccount.currency !== 'USD' && (
@@ -722,13 +734,13 @@ function Step3EnterAmount({
           Merchant reference{' '}
           <span className="font-normal text-content-tertiary">(optional)</span>
         </label>
-        <input
+        <TextInput
           id="send-funds-reference"
           type="text"
           value={formData.merchantReference}
           onChange={(e) => onRefChange(e.target.value)}
           placeholder="e.g. payroll-march-w1"
-          className="w-full h-11 px-3.5 text-sm rounded-xl border border-border-primary-main bg-surface-primary text-content-primary focus:outline-none focus:ring-1 focus:ring-action-primary-main transition-colors placeholder:text-content-quaternary font-mono"
+          className="w-full font-mono"
         />
       </div>
     </div>

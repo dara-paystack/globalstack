@@ -154,7 +154,7 @@ export function buildAlertItems(navigate) {
       onView:    () => navigate('/customers', { state: { openCustomerId: c.id } }),
     }))
 
-  // ── 4. Stalled transactions (pending > 1hr) ────────────────────────────────
+  // ── 5. Stalled transactions (pending > 1hr) ────────────────────────────────
   // Uses Date.now() — all fixture pending transactions are many days old vs the
   // fixture anchor dates, so they all surface. Intentional for the prototype.
   allTxns

@@ -52,7 +52,7 @@ export function useTransfer(id) {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!id) return
+    if (!id) { setLoading(false); return }
     setLoading(true)
     setError(null)
     fetch(`/api/transfers/${id}`)

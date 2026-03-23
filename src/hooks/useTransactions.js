@@ -57,7 +57,7 @@ export function useTransaction(id) {
   const [error, setError] = useState(null)
 
   const fetchData = useCallback(async () => {
-    if (!id) return
+    if (!id) { setLoading(false); return }
     setLoading(true)
     setError(null)
     try {

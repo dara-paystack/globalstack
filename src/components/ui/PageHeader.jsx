@@ -35,7 +35,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Filter, X } from 'lucide-react'
 import {
-  Button,
+  Button, Chip,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@paystack/pax'
 
@@ -56,8 +56,8 @@ export function PageHeader({
 
   // Active count — how many filters are non-default. Used for the count badge
   // on the Filter button and to decide whether to render the pills row.
-  const activeCount = filters.filter((f) => f.value !== (f.defaultValue ?? 'all')).length
   const activePills = filters.filter((f) => f.value !== (f.defaultValue ?? 'all'))
+  const activeCount = activePills.length
 
   function openPanel() {
     // Sync pending state from current applied values so the panel reflects
@@ -117,12 +117,7 @@ export function PageHeader({
                 onClick={panelOpen ? closePanel : openPanel}
                 aria-haspopup="true"
                 aria-expanded={panelOpen}
-                className={[
-                  'flex items-center gap-1.5 h-9 px-3 rounded-lg border text-sm font-medium transition-colors cursor-pointer',
-                  activeCount > 0
-                    ? 'border-action-primary-main bg-action-primary-light text-action-primary-main'
-                    : 'border-border-primary-main bg-surface-primary text-content-secondary hover:bg-surface-secondary hover:text-content-primary',
-                ].join(' ')}
+                className="flex items-center gap-1.5 h-9 px-3 rounded-lg border text-sm font-medium transition-colors cursor-pointer border-border-primary-main bg-surface-primary text-content-secondary hover:bg-surface-secondary hover:text-content-primary"
               >
                 <Filter width={14} height={14} strokeWidth={2} />
                 Filter
@@ -260,19 +255,18 @@ export function PageHeader({
             const displayLabel = selectedOpt?.label ?? f.value
 
             return (
-              <div
-                key={f.id}
-                className="flex items-center gap-1 pl-2.5 pr-1.5 py-1 text-xs font-medium rounded-full bg-action-primary-light border border-border-primary-light text-action-primary-main"
-              >
-                <span>{f.label}: {displayLabel}</span>
-                <button
-                  onClick={() => f.onChange(f.defaultValue ?? 'all')}
-                  className="ml-0.5 text-action-primary-main hover:text-action-primary-dark cursor-pointer leading-none"
-                  aria-label={`Remove ${f.label} filter`}
-                >
-                  <X width={11} height={11} strokeWidth={2.5} />
-                </button>
-              </div>
+              <Chip key={f.id} variant="input" asChild>
+                <div className="flex items-center gap-1 cursor-default">
+                  <span>{f.label}: {displayLabel}</span>
+                  <button
+                    onClick={() => f.onChange(f.defaultValue ?? 'all')}
+                    className="cursor-pointer leading-none text-content-tertiary hover:text-content-primary"
+                    aria-label={`Remove ${f.label} filter`}
+                  >
+                    <X width={11} height={11} strokeWidth={2.5} />
+                  </button>
+                </div>
+              </Chip>
             )
           })}
         </div>

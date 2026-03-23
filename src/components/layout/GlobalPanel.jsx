@@ -5,8 +5,8 @@
 
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Skeleton, Tabs, TabsList, TabsTrigger, TabsContent, Button, Chip } from '@paystack/pax'
-import { Circle, X, ArrowLeft, ArrowUp, ArrowDown, CheckCircle } from 'lucide-react'
+import { Skeleton, Tabs, TabsList, TabsTrigger, TabsContent, Button, Chip, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@paystack/pax'
+import { X, ArrowLeft, ArrowUp, ArrowDown, CheckCircle, Network, Landmark } from 'lucide-react'
 import { usePanelContext } from '../../context/PanelContext'
 import { useTransaction } from '../../hooks/useTransactions'
 import { useAccount } from '../../hooks/useAccounts'
@@ -750,9 +750,21 @@ function AccountsTab({ accounts, navigate }) {
           onClick={() => navigate('/accounts', { state: { openAccountId: account.id } })}
           className="w-full grid grid-cols-[auto_1fr_auto] items-start gap-3 px-6 py-3.5 hover:bg-surface-secondary transition-colors text-left cursor-pointer"
         >
-          <div className="mt-[3px]">
-            <Badge variant="type" value={account.type} />
-          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="mt-[3px] text-content-secondary cursor-default">
+                  {account.type === 'fiat'
+                    ? <Landmark width={16} height={16} strokeWidth={1.5} />
+                    : <Network width={16} height={16} strokeWidth={1.5} />
+                  }
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                {account.type === 'fiat' ? 'Fiat account' : 'On-chain account'}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <div className="min-w-0">
             <div className="text-sm font-medium text-content-primary truncate">
               {account.label}
@@ -848,75 +860,72 @@ function TransactionsTab({ txns, customerId, navigate }) {
 // States where no action is needed: under_review, active, rejected,
 //   paused, offboarded.
 
+// KYC_STATUS_CONTENT — message text and whether to show the KYC link.
+// Title and color fields removed: the badge is the status indicator; prose is explanation only.
 const KYC_STATUS_CONTENT = {
   active: {
-    color: 'text-feedback-success-main',
-    title: 'Identity verified',
-    body: 'This customer has passed all required KYC checks.',
+    message: 'Customer has passed all required KYC checks.',
     showKycLink: false,
   },
   not_started: {
-    color: 'text-content-secondary',
-    title: 'KYC not started',
-    body: 'This customer has not completed KYC. Share the KYC link to get them started.',
+    message: 'Customer has not started KYC.',
     showKycLink: true,
   },
   incomplete: {
-    color: 'text-feedback-warning-main',
-    title: 'KYC incomplete',
-    body: 'This customer has not completed KYC. Share the KYC link to get them started.',
+    message: 'Customer has not completed KYC.',
     showKycLink: true,
   },
   awaiting_questionnaire: {
-    color: 'text-feedback-warning-main',
-    title: 'Awaiting questionnaire',
-    body: 'Waiting for customer to complete their compliance questionnaire.',
+    message: 'Waiting for customer to complete their questionnaire.',
     showKycLink: true,
   },
   awaiting_ubo: {
-    color: 'text-feedback-warning-main',
-    title: 'Awaiting UBO disclosure',
-    body: 'This business customer needs to disclose their ultimate beneficial owner.',
+    message: 'Waiting for customer to disclose their ultimate beneficial owner.',
     showKycLink: true,
   },
   under_review: {
-    color: 'text-feedback-information-main',
-    title: 'Under review',
-    body: 'Documents submitted and under review. No action required.',
+    message: 'Documents submitted and under review. No action required.',
     showKycLink: false,
   },
   rejected: {
-    color: 'text-feedback-danger-main',
-    title: 'Verification failed',
-    body: 'KYC was rejected. This customer cannot transact.',
+    message: 'KYC was rejected. This customer cannot transact.',
     showKycLink: false,
   },
   paused: {
-    color: 'text-feedback-warning-main',
-    title: 'Account paused',
-    body: "This customer's account has been paused.",
+    message: "This customer's account has been paused.",
     showKycLink: false,
   },
   offboarded: {
-    color: 'text-content-tertiary',
-    title: 'Offboarded',
-    body: 'This customer has been offboarded.',
+    message: 'This customer has been offboarded.',
     showKycLink: false,
   },
 }
 
-function kycLinkDaysUntilExpiry(expiresAt) {
-  if (!expiresAt) return null
-  const msPerDay = 1000 * 60 * 60 * 24
-  const diff = Math.ceil((new Date(expiresAt) - Date.now()) / msPerDay)
-  return diff
+// CopyTextLink — inline text link that copies to clipboard.
+// Used for KYC and TOS links so the action reads as a simple affordance, not a button.
+function CopyTextLink({ text, label }) {
+  const [copied, setCopied] = useState(false)
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {}
+  }
+  return (
+    <button
+      onClick={handleCopy}
+      className="link text-sm cursor-pointer text-left"
+    >
+      {copied ? 'Copied!' : label}
+    </button>
+  )
 }
 
 function KycTab({ customer }) {
-  const { kycStatus, type, createdAt, kycLink, kycLinkExpiresAt, tosLink, tosStatus } = customer
+  const { kycStatus, type, kycLink, tosLink, tosStatus } = customer
   const isBusiness = type === 'business'
   const content = KYC_STATUS_CONTENT[kycStatus]
-  const daysLeft = kycLinkDaysUntilExpiry(kycLinkExpiresAt)
 
   const docs = [
     { label: 'Government ID' },
@@ -926,98 +935,56 @@ function KycTab({ customer }) {
 
   return (
     <div className="px-6 py-5 space-y-6">
-      {/* KYC status block */}
+      {/* KYC Status */}
       <div>
-        <div className="text-xs font-semibold uppercase tracking-widest text-content-tertiary mb-3">
+        <div className="text-xs font-semibold uppercase tracking-widest text-content-tertiary mb-4">
           KYC Status
         </div>
-        <div className="mb-3">
-          <Badge variant="status" value={kycStatus} context="kyc" />
-        </div>
         {content && (
-          <div className="rounded-lg border border-border-primary-light bg-surface-secondary p-4 space-y-3">
-            <div>
-              <p className={['text-sm font-medium mb-1', content.color].join(' ')}>
-                {content.title}
-              </p>
-              <p className="text-xs text-content-secondary">{content.body}</p>
-              {kycStatus === 'active' && createdAt && (
-                <p className="text-xs text-content-tertiary mt-2">
-                  Verified {formatDate(createdAt)}
-                </p>
+          <div className="flex items-start gap-2">
+            <Badge variant="status" value={kycStatus} context="kyc" />
+            <div className="flex flex-col gap-1">
+              <span className="text-sm text-content-secondary">{content.message}</span>
+              {content.showKycLink && kycLink && (
+                <CopyTextLink text={kycLink} label="Copy KYC link →" />
               )}
             </div>
-            {content.showKycLink && kycLink && (
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-content-tertiary truncate flex-1">
-                    {kycLink}
-                  </span>
-                  <CopyButton text={kycLink} />
-                </div>
-                {daysLeft !== null && (
-                  <p className={[
-                    'text-xs',
-                    daysLeft <= 0 ? 'text-feedback-danger-main' :
-                    daysLeft <= 7 ? 'text-feedback-warning-main' :
-                    'text-content-quaternary'
-                  ].join(' ')}>
-                    {daysLeft <= 0
-                      ? 'Link expired'
-                      : `Expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`}
-                  </p>
-                )}
-              </div>
-            )}
           </div>
         )}
       </div>
 
-      {/* TOS Status — always shown; state communicates whether customer can transact */}
+      {/* Terms of Service */}
       <div>
-        <div className="text-xs font-semibold uppercase tracking-widest text-content-tertiary mb-3">
+        <div className="text-xs font-semibold uppercase tracking-widest text-content-tertiary mb-4">
           Terms of Service
         </div>
-        {tosStatus ? (
-          <div className="rounded-lg border border-border-primary-light bg-surface-secondary p-4 space-y-2">
-            <div className="flex items-center gap-2">
-              <Badge variant="status" value="completed">Accepted</Badge>
-            </div>
-            <p className="text-xs text-content-secondary">
-              Customer has accepted the Terms of Service and is eligible to transact.
-            </p>
-          </div>
-        ) : (
-          <div className="rounded-lg border border-feedback-warning-border bg-feedback-warning-light p-4 space-y-2">
-            <p className="text-sm font-medium text-feedback-warning-main">
-              Not accepted
-            </p>
-            <p className="text-xs text-content-secondary">
-              Customer has not accepted Terms of Service. They cannot transact until TOS is accepted.
-            </p>
-            {tosLink && (
-              <div className="flex items-center gap-2 pt-1">
-                <span className="text-xs font-mono text-content-tertiary truncate flex-1">
-                  {tosLink}
-                </span>
-                <CopyButton text={tosLink} />
-              </div>
+        <div className="flex items-start gap-2">
+          <Badge variant="status" value={tosStatus ? 'completed' : 'pending'}>
+            {tosStatus ? 'Accepted' : 'Not accepted'}
+          </Badge>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm text-content-secondary">
+              {tosStatus
+                ? 'Customer has accepted the Terms of Service and is eligible to transact.'
+                : 'Customer has not accepted the Terms of Service.'}
+            </span>
+            {!tosStatus && tosLink && (
+              <CopyTextLink text={tosLink} label="Copy TOS link →" />
             )}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Document checklist — always shown for context */}
+      {/* Documents — two-column list; no icons to avoid false interactive affordance */}
       <div>
-        <div className="text-xs font-semibold uppercase tracking-widest text-content-tertiary mb-3">
+        <div className="text-xs font-semibold uppercase tracking-widest text-content-tertiary mb-4">
           Documents
         </div>
-        <div className="space-y-3">
+        <div className="divide-y divide-border-default">
           {docs.map((doc) => (
-            <div key={doc.label} className="flex items-center gap-3">
-              <Circle size={13} strokeWidth={1.5} className="text-content-quaternary shrink-0" />
-              <span className="text-sm text-content-secondary flex-1">{doc.label}</span>
-              <span className="text-xs text-content-quaternary">Not submitted</span>
+            <div key={doc.label} className="flex items-center justify-between py-2.5">
+              <span className="text-sm text-content-primary">{doc.label}</span>
+              <span className="text-sm text-content-secondary">Not submitted</span>
             </div>
           ))}
         </div>

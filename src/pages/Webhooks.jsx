@@ -95,9 +95,9 @@ export default function Webhooks() {
           </ModalDialogHeader>
           <ModalDialogFooter>
             <ModalDialogClose asChild>
-              <Button variant="outline" color="secondary">Cancel</Button>
+              <Button variant="outline" color="secondary" className="cursor-pointer">Cancel</Button>
             </ModalDialogClose>
-            <Button variant="default" color="error" onClick={() => handleDelete(deleteTarget)}>
+            <Button variant="default" color="error" onClick={() => handleDelete(deleteTarget)} className="cursor-pointer">
               Delete endpoint
             </Button>
           </ModalDialogFooter>

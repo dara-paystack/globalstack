@@ -17,7 +17,7 @@ export function useWebhook(id) {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!id) return
+    if (!id) { setLoading(false); return }
     setLoading(true)
     setError(null)
     fetch(`/api/webhooks/${id}`)
@@ -44,7 +44,7 @@ export function useWebhookDeliveries(id, page = 1) {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!id) return
+    if (!id) { setLoading(false); return }
     setLoading(true)
     setError(null)
     fetch(`/api/webhooks/${id}/deliveries?page=${page}&limit=15`)
