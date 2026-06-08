@@ -370,6 +370,21 @@ body {
     scrollbar-width: thin;
   }
 
+  /* Landing page: blinking terminal cursor in FloatingCodeBlock */
+  .cursor-blink {
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cursor-blink {
+      animation: none;
+      opacity: 1;
+    }
+  }
+
   /* Pax inline link style — use on <a>, <Link>, or <button> acting as a text link */
   .link {
     color: var(--color-action-link-main);

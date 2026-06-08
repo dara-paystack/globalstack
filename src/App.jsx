@@ -23,7 +23,7 @@ function PageError() {
         <p className="text-xs text-content-tertiary font-mono max-w-md break-all">{message}</p>
       </div>
       <button
-        onClick={() => navigate('/')}
+        onClick={() => navigate('/dashboard')}
         className="text-xs text-content-secondary underline underline-offset-2 cursor-pointer"
       >
         Go to Overview
@@ -41,29 +41,34 @@ import Webhooks from './pages/Webhooks'
 import AuditLog from './pages/AuditLog'
 import Team from './pages/Team'
 import RequestLog from './pages/RequestLog'
+import LandingPage from './landing/LandingPage'
 
 // createBrowserRouter defines the full route tree.
-// AppShell is a layout route (no path) — it renders the sidebar/topbar and
-// an <Outlet /> that shows whichever child route is active.
+//   /            → marketing LandingPage (standalone, no AppShell chrome)
+//   /dashboard/* → the merchant dashboard, rendered inside AppShell
+// The landing's "Sign in" CTA links straight to /dashboard.
 const router = createBrowserRouter([
+  { path: '/', element: <LandingPage /> },
   {
+    // AppShell is a pathless layout route — it renders the sidebar/topbar and
+    // an <Outlet /> that shows whichever dashboard child route is active.
     element: <AppShell />,
     errorElement: <PageError />,
     children: [
-      { path: '/', element: <Overview /> },
-      { path: '/transactions', element: <Transactions /> },
-      { path: '/accounts', element: <Accounts /> },
-      { path: '/recipients', element: <Recipients /> },
-      { path: '/customers', element: <Customers /> },
-      { path: '/settings/api-key', element: <ApiKey /> },
-      { path: '/settings/audit-log', element: <AuditLog /> },
-      { path: '/settings/team', element: <Team /> },
+      { path: '/dashboard', element: <Overview /> },
+      { path: '/dashboard/transactions', element: <Transactions /> },
+      { path: '/dashboard/accounts', element: <Accounts /> },
+      { path: '/dashboard/recipients', element: <Recipients /> },
+      { path: '/dashboard/customers', element: <Customers /> },
+      { path: '/dashboard/settings/api-key', element: <ApiKey /> },
+      { path: '/dashboard/settings/audit-log', element: <AuditLog /> },
+      { path: '/dashboard/settings/team', element: <Team /> },
       // DEVELOPER section routes
-      { path: '/developer/webhooks', element: <Webhooks /> },
-      { path: '/developer/request-log', element: <RequestLog /> },
+      { path: '/dashboard/developer/webhooks', element: <Webhooks /> },
+      { path: '/dashboard/developer/request-log', element: <RequestLog /> },
       // Redirect old Webhooks route so existing bookmarks and deep-links still work.
       // `replace` prevents the old path from cluttering browser history.
-      { path: '/settings/webhooks', element: <Navigate to="/developer/webhooks" replace /> },
+      { path: '/dashboard/settings/webhooks', element: <Navigate to="/dashboard/developer/webhooks" replace /> },
     ],
   },
 ])

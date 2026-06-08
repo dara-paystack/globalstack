@@ -87,3 +87,12 @@ These don't exist in Pax but are styled exclusively with Pax tokens:
 - Chart/sparkline components → use Recharts
 - Timeline/stepper → custom-built
 - Detail panel pattern → custom-built
+
+## Out of scope: the landing page
+
+`src/landing/` (marketing site at `/`) deliberately does NOT use Pax. It's ported
+from a standalone repo that styles with plain `<a>`/inline styles + standard Tailwind
+utilities + framer-motion. It shares the same Tailwind v4 build (so standard utilities
+and arbitrary values just work), but pulls in no Pax components or tokens. Keep it that
+way — don't introduce Pax into landing components, and don't leak landing patterns
+(inline-style CTAs, framer-motion) into the dashboard.

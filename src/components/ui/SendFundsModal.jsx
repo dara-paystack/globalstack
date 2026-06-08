@@ -838,7 +838,7 @@ function SuccessView({ transfer, onClose, navigate }) {
         <button
           onClick={() => {
             onClose()
-            navigate('/transactions')
+            navigate('/dashboard/transactions')
           }}
           className="px-4 py-2 text-sm font-medium rounded-lg bg-action-primary-main text-content-inverse hover:bg-action-primary-dark cursor-pointer transition-colors"
         >

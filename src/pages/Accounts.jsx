@@ -566,7 +566,7 @@ function CustomerAccountRow({ acc, panelState, panelOpen, onOpen }) {
     // Opening a panel is ephemeral UI state — it shouldn't be in the URL, survive
     // a page refresh, or be shareable. Router state is the correct tool: it
     // survives the navigation but not a reload or a direct link.
-    navigate('/customers', { state: { openCustomerId: acc.customerId } })
+    navigate('/dashboard/customers', { state: { openCustomerId: acc.customerId } })
   }
 
   return (

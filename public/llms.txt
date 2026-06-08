@@ -1,0 +1,73 @@
+# GlobalStack
+# Optimised for LLM consumption
+# Auto-generated 2026-03-30 - do not edit manually
+
+## Product
+Move money across Africa and the world. In seconds.
+One API to accept, hold, convert, and pay out funds across 12 currencies in 18 African markets, powered by stablecoin infrastructure.
+
+## How it works
+One API. Every direction money moves.
+Send, receive, or hold - GlobalStack handles the conversion, routing, and settlement. You just call the API.
+
+### Flow 01 - Send to Africa
+POST /v1/send
+Initiate in stablecoins. It arrives as NGN, KES, GHS, or mobile money in a few minutes - no FX desks, no correspondent delays.
+
+### Flow 02 - Receive from Africa
+POST /v1/receive
+Accept local currency payments across 18 markets. Settlement hits your wallet as stablecoins, instantly.
+
+### Flow 03 - USD account
+POST /v1/account
+Hold stablecoins in a programmable account. Sweep to any supported market on demand, at any time.
+
+## For developers
+Built API-first. Documented for humans.
+One integration gives you full coverage: OpenAPI spec, a sandbox that mirrors production, and real-time webhook events from day one.
+
+### Features
+- Single unified API: One integration covers all three flows. No separate SDKs, no per-country endpoints.
+- Webhook events: Get notified the moment a payment moves. Build reactive logic without polling.
+- Production-grade sandbox: A full mirror of production. Test every flow before you ship a single line to live.
+- OpenAPI spec: Download the spec and generate typed clients in any language, instantly.
+
+## By the numbers
+Built to handle volume. Designed to stay out of your way.
+
+- 18 - African markets, live
+- Minutes - From initiation to local delivery
+- Stablecoins - Native - no conversion middlemen
+- 24/7 - Always on, no settlement windows
+
+## Supported markets
+- Nigeria (NG) - NGN
+- Kenya (KE) - KES
+- Ghana (GH) - GHS
+- South Africa (ZA) - ZAR
+- Tanzania (TZ) - TZS
+- Uganda (UG) - UGX
+- Ethiopia (ET) - ETB
+- Rwanda (RW) - RWF
+- Senegal (SN) - XOF
+- Ivory Coast (CI) - XOF
+- Cameroon (CM) - XAF
+- Zambia (ZM) - ZMW
+- Zimbabwe (ZW) - ZWL
+- Mozambique (MZ) - MZN
+- Angola (AO) - AOA
+- Egypt (EG) - EGP
+- Morocco (MA) - MAD
+- Tunisia (TN) - TND
+- Algeria (DZ) - DZD
+
+## Settlement
+Currency: Stablecoins (ERC-20 compatible)
+Time: A few minutes
+
+## Developed by
+Paystack - paystack.com
+TSGLabs - tsglabs.com
+
+## Status
+Now in private beta

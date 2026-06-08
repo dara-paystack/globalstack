@@ -107,7 +107,7 @@ function searchTransactions(q) {
       label: tx.id,
       subtitle: `${tx.corridor} · ${formatAmount(tx.destAmount, tx.destCurrency)}`,
       value: capitalize(tx.status),
-      navPath: '/transactions',
+      navPath: '/dashboard/transactions',
       navState: { openTransactionId: tx.id },
     })),
   }
@@ -131,7 +131,7 @@ function searchCustomers(q) {
       label: c.name,
       subtitle: c.id,
       value: KYC_DISPLAY[c.kycStatus] ?? capitalize(c.kycStatus),
-      navPath: '/customers',
+      navPath: '/dashboard/customers',
       navState: { openCustomerId: c.id },
     })),
   }
@@ -158,7 +158,7 @@ function searchAccounts(q) {
           ? `${a.addressShort} · ${capitalize(a.chain ?? '')}`
           : `${a.addressShort} · ${a.bankName ?? 'Fiat'}`,
       value: formatAmount(a.balance, a.currency),
-      navPath: '/accounts',
+      navPath: '/dashboard/accounts',
       navState: { openAccountId: a.id },
     })),
   }
@@ -185,7 +185,7 @@ function searchRecipients(q) {
           ? `${r.accountNumberMasked} · ${formatRail(r.rail)}`
           : `${(r.walletAddress ?? '').slice(0, 10)}… · ${capitalize(r.chain ?? '')}`,
       value: capitalize(r.status),
-      navPath: '/recipients',
+      navPath: '/dashboard/recipients',
       navState: { openRecipientId: r.id },
     })),
   }
@@ -207,7 +207,7 @@ function lookupRecentResult(type, id) {
         label: tx.id,
         subtitle: `${tx.corridor} · ${formatAmount(tx.destAmount, tx.destCurrency)}`,
         value: capitalize(tx.status),
-        navPath: '/transactions',
+        navPath: '/dashboard/transactions',
         navState: { openTransactionId: tx.id },
       }
     }
@@ -221,7 +221,7 @@ function lookupRecentResult(type, id) {
         label: c.name,
         subtitle: c.id,
         value: KYC_DISPLAY[c.kycStatus] ?? capitalize(c.kycStatus),
-        navPath: '/customers',
+        navPath: '/dashboard/customers',
         navState: { openCustomerId: c.id },
       }
     }
@@ -238,7 +238,7 @@ function lookupRecentResult(type, id) {
             ? `${a.addressShort} · ${capitalize(a.chain ?? '')}`
             : `${a.addressShort} · ${a.bankName ?? 'Fiat'}`,
         value: formatAmount(a.balance, a.currency),
-        navPath: '/accounts',
+        navPath: '/dashboard/accounts',
         navState: { openAccountId: a.id },
       }
     }
@@ -255,7 +255,7 @@ function lookupRecentResult(type, id) {
             ? `${r.accountNumberMasked} · ${formatRail(r.rail)}`
             : `${(r.walletAddress ?? '').slice(0, 10)}… · ${capitalize(r.chain ?? '')}`,
         value: capitalize(r.status),
-        navPath: '/recipients',
+        navPath: '/dashboard/recipients',
         navState: { openRecipientId: r.id },
       }
     }
@@ -484,10 +484,10 @@ export function GlobalSearch() {
 
     const { txGroup, custGroup, accGroup, recGroup } = searchResults
     const groups = [
-      { label: 'Transactions', group: txGroup, navPath: '/transactions' },
-      { label: 'Customers', group: custGroup, navPath: '/customers' },
-      { label: 'Accounts', group: accGroup, navPath: '/accounts' },
-      { label: 'Recipients', group: recGroup, navPath: '/recipients' },
+      { label: 'Transactions', group: txGroup, navPath: '/dashboard/transactions' },
+      { label: 'Customers', group: custGroup, navPath: '/dashboard/customers' },
+      { label: 'Accounts', group: accGroup, navPath: '/dashboard/accounts' },
+      { label: 'Recipients', group: recGroup, navPath: '/dashboard/recipients' },
     ].filter((g) => g.group.results.length > 0)
 
     if (groups.length === 0) {

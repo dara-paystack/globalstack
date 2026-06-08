@@ -4,9 +4,18 @@
 
 ```
 src/
-  App.jsx               Router + PanelProvider + ModeProvider + SearchProvider root
+  App.jsx               Router root: / = LandingPage, /dashboard/* = AppShell tree
+                        (PanelProvider + ModeProvider + SearchProvider + SidebarProvider)
   main.jsx              MSW bootstrap → createRoot
-  index.css             Tailwind v4 + Pax theme import
+  index.css             Tailwind v4 + Pax theme import (+ landing cursor-blink keyframe)
+
+  landing/              Marketing site at / — self-contained, isolated from the dashboard.
+                        React + framer-motion + three.js; plain <a>/inline styles + standard
+                        Tailwind utilities (NO Pax, NO custom config). "Sign in" → /dashboard.
+    LandingPage.jsx     Page root (was the landing repo's App.jsx)
+    components/         Navbar, Hero, HowItWorks, FloatingCodeBlock, DeveloperSection,
+                        StatsSection, Footer, GlobeCanvas (lazy-loaded three.js globe)
+    hooks/ constants/ data/   Landing-only scroll/copy/flow helpers
 
   components/
     layout/
@@ -34,7 +43,7 @@ src/
     Recipients.jsx      Table (name/customer/destination/rail/status/created); calls openPanel('recipient', id)
     Customers.jsx       Table; calls openPanel('customer', id)
     ApiKey.jsx          Masked key display
-    Webhooks.jsx        Endpoint list + inline add form  ← now at /developer/webhooks
+    Webhooks.jsx        Endpoint list + inline add form  ← now at /dashboard/developer/webhooks
     AuditLog.jsx        Compliance record of dashboard actions
     Team.jsx            Team members + permissions reference
     RequestLog.jsx      API request log — developer debugging surface
@@ -69,28 +78,34 @@ src/
 
 ## Routing
 
-Uses `createBrowserRouter` (HTML5 History API). AppShell is a layout route
-(no path) that renders the shell and an `<Outlet />` for the active child.
+Uses `createBrowserRouter` (HTML5 History API). The marketing LandingPage owns `/`
+as a standalone route (no AppShell). The dashboard lives under `/dashboard/*`, where
+AppShell is a pathless layout route that renders the shell and an `<Outlet />` for
+the active child. The landing's "Sign in" CTAs link to `/dashboard` via plain `<a href>`
+(full page load — keeps the landing free of any react-router dependency).
 
 ```
-BUSINESS
-/                     → Overview
-/transactions         → Transactions
-/accounts             → Accounts
-/recipients           → Recipients
-/customers            → Customers
+MARKETING
+/                                 → LandingPage (no AppShell)
+
+DASHBOARD (AppShell tree)
+/dashboard                        → Overview
+/dashboard/transactions           → Transactions
+/dashboard/accounts               → Accounts
+/dashboard/recipients             → Recipients
+/dashboard/customers              → Customers
 
 DEVELOPER
-/developer/webhooks   → Webhooks
-/developer/request-log → RequestLog
+/dashboard/developer/webhooks     → Webhooks
+/dashboard/developer/request-log  → RequestLog
 
 ADMIN
-/settings/api-key     → ApiKey
-/settings/audit-log   → AuditLog
-/settings/team        → Team
+/dashboard/settings/api-key       → ApiKey
+/dashboard/settings/audit-log     → AuditLog
+/dashboard/settings/team          → Team
 
 REDIRECTS (backwards-compatibility)
-/settings/webhooks    → Navigate replace → /developer/webhooks
+/dashboard/settings/webhooks      → Navigate replace → /dashboard/developer/webhooks
 ```
 
 ## Data Flow

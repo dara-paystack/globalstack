@@ -32,22 +32,22 @@ import { useMode } from '../../context/ModeContext'
 import { useSidebar } from '../../context/SidebarContext'
 
 const NAV_MAIN = [
-  { to: '/', label: 'Overview', end: true, icon: LayoutDashboard },
-  { to: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
-  { to: '/accounts', label: 'Accounts', icon: Wallet },
-  { to: '/recipients', label: 'Recipients', icon: Contact },
-  { to: '/customers', label: 'Customers', icon: Users },
+  { to: '/dashboard', label: 'Overview', end: true, icon: LayoutDashboard },
+  { to: '/dashboard/transactions', label: 'Transactions', icon: ArrowLeftRight },
+  { to: '/dashboard/accounts', label: 'Accounts', icon: Wallet },
+  { to: '/dashboard/recipients', label: 'Recipients', icon: Contact },
+  { to: '/dashboard/customers', label: 'Customers', icon: Users },
 ]
 
 const NAV_DEVELOPER = [
-  { to: '/developer/webhooks', label: 'Webhooks', icon: Webhook },
-  { to: '/developer/request-log', label: 'Request Logs', icon: Terminal },
+  { to: '/dashboard/developer/webhooks', label: 'Webhooks', icon: Webhook },
+  { to: '/dashboard/developer/request-log', label: 'Request Logs', icon: Terminal },
 ]
 
 const NAV_ADMIN = [
-  { to: '/settings/api-key', label: 'API Keys', icon: KeyRound },
-  { to: '/settings/audit-log', label: 'Audit Logs', icon: ClipboardList },
-  { to: '/settings/team', label: 'Team', icon: UsersRound },
+  { to: '/dashboard/settings/api-key', label: 'API Keys', icon: KeyRound },
+  { to: '/dashboard/settings/audit-log', label: 'Audit Logs', icon: ClipboardList },
+  { to: '/dashboard/settings/team', label: 'Team', icon: UsersRound },
 ]
 
 // NavItem uses SidebarContext directly to compute label visibility.

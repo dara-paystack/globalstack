@@ -26,7 +26,7 @@ CURRENT STATUS — Updated Mar 19, 2026
 
 All pages are built and functional. Last completed: Step 31 (Responsive layout).
 
-PAGES BUILT:
+PAGES BUILT (all dashboard pages are under /dashboard — paths below omit the prefix):
   BUSINESS section:
     Overview      /                    Balance card + sparkline + Needs Attention + quick actions
     Transactions  /transactions        Filter bar + table + push panel + pagination
@@ -43,7 +43,14 @@ PAGES BUILT:
     Audit Log     /settings/audit-log  Compliance table (read-only, absolute timestamps)
     Team          /settings/team       Member table + collapsible permissions matrix
 
-  Redirect: /settings/webhooks → /developer/webhooks (Navigate replace)
+  MARKETING: LandingPage at / (src/landing/) — see STACK + ARCHITECTURE notes below.
+
+  Redirect: /dashboard/settings/webhooks → /dashboard/developer/webhooks (Navigate replace)
+
+  LANDING PAGE (marketing) at /  — src/landing/, isolated from dashboard:
+    Standalone React + framer-motion + three.js (GlobeCanvas, lazy-loaded) marketing
+    site. Uses plain <a>/inline styles + standard Tailwind utilities (no Pax, no custom
+    config). "Sign in" CTAs (Navbar + Hero) link to /dashboard. Waitlist removed.
 
 GLOBAL FEATURES:
   - cmd+k global search (client-side, grouped results, session-only recent history)
@@ -133,6 +140,7 @@ STACK
 - lucide-react — ALL icons. Never write inline SVG.
   Usage: import { X, Check, ChevronDown } from 'lucide-react'
   Sizing: width/height props, strokeWidth for weight.
+- framer-motion + three — LANDING PAGE ONLY (src/landing/). Not used by the dashboard.
 
 Do NOT add: styled-components, Emotion, second Tailwind install, raw Shadcn, Bootstrap.
 
@@ -209,22 +217,31 @@ src/
   lib/
     format.js   ← formatUSDC, formatAmount, formatDatetime, formatDate, formatRelative
     alerts.js   ← buildAlertItems() — Needs Attention data derivation
-  App.jsx       ← createBrowserRouter; provider order: PanelProvider > ModeProvider
+  landing/      ← marketing site at / (self-contained; framer-motion + three.js)
+    LandingPage.jsx  ← page root (was the landing repo's App.jsx)
+    components/  ← Navbar, Hero, HowItWorks, FloatingCodeBlock, DeveloperSection,
+                   StatsSection, Footer, GlobeCanvas (lazy)
+    hooks/ constants/ data/  ← landing-only scroll/copy helpers
+  App.jsx       ← createBrowserRouter; / = LandingPage, /dashboard/* = AppShell tree
+                  provider order: PanelProvider > ModeProvider
                   > SearchProvider > RouterProvider
   main.jsx      ← MSW bootstrap → createRoot
 
 ROUTES:
-  /                         Overview
-  /transactions             Transactions
-  /accounts                 Accounts
-  /recipients               Recipients
-  /customers                Customers
-  /developer/webhooks       Webhooks
-  /developer/request-log    RequestLog
-  /settings/api-key         ApiKey
-  /settings/audit-log       AuditLog
-  /settings/team            Team
-  /settings/webhooks        → redirect to /developer/webhooks
+  /                                   LandingPage (marketing, standalone — no AppShell)
+  /dashboard                          Overview
+  /dashboard/transactions             Transactions
+  /dashboard/accounts                 Accounts
+  /dashboard/recipients               Recipients
+  /dashboard/customers                Customers
+  /dashboard/developer/webhooks       Webhooks
+  /dashboard/developer/request-log    RequestLog
+  /dashboard/settings/api-key         ApiKey
+  /dashboard/settings/audit-log       AuditLog
+  /dashboard/settings/team            Team
+  /dashboard/settings/webhooks        → redirect to /dashboard/developer/webhooks
+  (Dashboard pages live under /dashboard; all internal nav/deep-links are prefixed.
+   Landing "Sign in" CTAs link to /dashboard via plain <a href>.)
 
 MSW API SURFACE:
   GET  /api/transactions        ?page&limit&status&type&accountId&mode

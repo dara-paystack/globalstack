@@ -312,7 +312,7 @@ function TransactionDetail({ txn }) {
         <PanelSection title="Settled To">
           {customerName && (
             <PanelRow label="Customer">
-              <Link to="/customers" className="text-sm font-medium link">
+              <Link to="/dashboard/customers" className="text-sm font-medium link">
                 {customerName}
               </Link>
             </PanelRow>
@@ -478,7 +478,7 @@ function AccountDetail({ account }) {
       <PanelSection title="Account">
         {!isMerchant && account.customer && (
           <PanelRow label="Customer">
-            <Link to="/customers" className="text-sm font-medium link">
+            <Link to="/dashboard/customers" className="text-sm font-medium link">
               {account.customer}
             </Link>
           </PanelRow>
@@ -570,7 +570,7 @@ function AccountDetail({ account }) {
             color="secondary"
             size="xs"
             className="cursor-pointer"
-            onClick={() => navigate('/transactions', { state: { filterAccountId: account.id } })}
+            onClick={() => navigate('/dashboard/transactions', { state: { filterAccountId: account.id } })}
           >
             View all
           </Button>
@@ -747,7 +747,7 @@ function AccountsTab({ accounts, navigate }) {
       {accounts.map((account) => (
         <button
           key={account.id}
-          onClick={() => navigate('/accounts', { state: { openAccountId: account.id } })}
+          onClick={() => navigate('/dashboard/accounts', { state: { openAccountId: account.id } })}
           className="w-full grid grid-cols-[auto_1fr_auto] items-start gap-3 px-6 py-3.5 hover:bg-surface-secondary transition-colors text-left cursor-pointer"
         >
           <TooltipProvider>
@@ -839,7 +839,7 @@ function TransactionsTab({ txns, customerId, navigate }) {
 
       <div className="px-6 py-4 border-t border-border-primary-light">
         <button
-          onClick={() => navigate('/transactions', { state: { filterCustomerId: customerId } })}
+          onClick={() => navigate('/dashboard/transactions', { state: { filterCustomerId: customerId } })}
           className="text-sm link cursor-pointer"
         >
           View all transactions →
@@ -1095,7 +1095,7 @@ function RecipientDetail({ recipient }) {
         <PanelSection title="Customer">
           <PanelRow label="Customer">
             <button
-              onClick={() => navigate('/customers', { state: { openCustomerId: customer.id } })}
+              onClick={() => navigate('/dashboard/customers', { state: { openCustomerId: customer.id } })}
               className="text-sm font-medium link cursor-pointer"
             >
               {customer.name}
@@ -1115,7 +1115,7 @@ function RecipientDetail({ recipient }) {
             color="secondary"
             size="xs"
             className="cursor-pointer"
-            onClick={() => navigate('/transactions', { state: { filterRecipientId: recipient.id, filterRecipientLabel: recipient.name } })}
+            onClick={() => navigate('/dashboard/transactions', { state: { filterRecipientId: recipient.id, filterRecipientLabel: recipient.name } })}
           >
             View all
           </Button>
@@ -1624,7 +1624,7 @@ function RequestLogDetail({ req }) {
             </div>
             <button
               onClick={() =>
-                navigate('/transactions', {
+                navigate('/dashboard/transactions', {
                   state: { openTransactionId: linkedTx.id },
                 })
               }
