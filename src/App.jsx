@@ -1,4 +1,5 @@
 import { createBrowserRouter, RouterProvider, Navigate, useRouteError, useNavigate } from 'react-router-dom'
+import { AccountProvider } from './context/AccountContext'
 import { ModeProvider } from './context/ModeContext'
 import { PanelProvider } from './context/PanelContext'
 import { SearchProvider } from './context/SearchContext'
@@ -80,14 +81,18 @@ export default function App() {
     // and page components can both read from the same context instance.
     // SidebarProvider wraps everything so Sidebar, MobileTopBar, and AppShell
     // can all read sidebar open/closed state from the same context instance.
-    <SidebarProvider>
-      <PanelProvider>
-        <ModeProvider>
-          <SearchProvider>
-            <RouterProvider router={router} />
-          </SearchProvider>
-        </ModeProvider>
-      </PanelProvider>
-    </SidebarProvider>
+    // AccountProvider is outermost so onboarding status is readable from
+    // every route — the standalone signup screens AND the dashboard tree.
+    <AccountProvider>
+      <SidebarProvider>
+        <PanelProvider>
+          <ModeProvider>
+            <SearchProvider>
+              <RouterProvider router={router} />
+            </SearchProvider>
+          </ModeProvider>
+        </PanelProvider>
+      </SidebarProvider>
+    </AccountProvider>
   )
 }
