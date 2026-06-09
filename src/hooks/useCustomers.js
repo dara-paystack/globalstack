@@ -1,13 +1,22 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useMode } from '../context/ModeContext'
+import { useAccount } from '../context/AccountContext'
 
 export function useCustomers({ kycStatus = '' } = {}) {
   const { mode } = useMode()
+  const { isReadOnly } = useAccount()
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const fetchData = useCallback(async () => {
+    // Pending accounts have no customers yet — short-circuit to empty.
+    if (isReadOnly) {
+      setData([])
+      setError(null)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -22,7 +31,7 @@ export function useCustomers({ kycStatus = '' } = {}) {
     } finally {
       setLoading(false)
     }
-  }, [mode, kycStatus])
+  }, [mode, kycStatus, isReadOnly])
 
   useEffect(() => {
     fetchData()

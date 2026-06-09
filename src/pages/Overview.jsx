@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowDown, ArrowUp, CheckCircle } from "lucide-react";
-import { Skeleton, Button } from "@paystack/pax";
+import { Skeleton, Button, Tooltip, TooltipTrigger, TooltipContent } from "@paystack/pax";
 import { usePageTitle } from "../lib/usePageTitle";
 import { useTransactions } from "../hooks/useTransactions";
 import { useAccounts } from "../hooks/useAccounts";
 import { usePanelContext } from "../context/PanelContext";
+import { useAccount } from "../context/AccountContext";
 import { Sparkline } from "../components/ui/Sparkline";
 import { Badge } from "../components/ui/Badge";
 import { SendFundsModal } from "../components/ui/SendFundsModal";
@@ -105,6 +106,8 @@ export default function Overview() {
   const { data: txns, loading: txnLoading } = useTransactions({ limit: 5 });
   const { data: accounts, loading: accLoading } = useAccounts();
   const { panelState, openPanel } = usePanelContext();
+  // Pending accounts are read-only: no derived alerts, disabled quick actions.
+  const { isReadOnly } = useAccount();
 
   // Send funds modal — triggered by the "Send funds" quick action button.
   // No preselectedAccountId here — the modal starts at step 1 so the operator
@@ -128,7 +131,9 @@ export default function Overview() {
 
   // Alert items: derived synchronously from fixture imports — no loading state needed.
   // buildAlertItems is called every render; fixtures are in-memory, cost is negligible.
-  const alertItems = buildAlertItems(navigate);
+  // Pending accounts read directly from fixtures here (not via a gated hook), so we
+  // must explicitly suppress alerts — otherwise demo fixture issues would surface.
+  const alertItems = isReadOnly ? [] : buildAlertItems(navigate);
 
   // Card border reflects the most severe category present, providing peripheral
   // urgency awareness even before the operator reads the card.
@@ -186,19 +191,33 @@ export default function Overview() {
 
         {/* Quick actions — compact outlined buttons. */}
         <div className="flex items-center gap-2">
-          {ACTIONS.map((action) => (
-            <Button
-              key={action.label}
-              variant="outline"
-              color="secondary"
-              size="sm"
-              className="cursor-pointer"
-              onClick={action.label === "Send funds" ? () => setSendFundsOpen(true) : undefined}
-            >
-              {action.icon}
-              {action.label}
-            </Button>
-          ))}
+          {ACTIONS.map((action) => {
+            const button = (
+              <Button
+                variant="outline"
+                color="secondary"
+                size="sm"
+                disabled={isReadOnly}
+                className="cursor-pointer"
+                onClick={action.label === "Send funds" ? () => setSendFundsOpen(true) : undefined}
+              >
+                {action.icon}
+                {action.label}
+              </Button>
+            );
+            // Read-only: wrap the (inert) disabled button in a span-backed Pax
+            // tooltip so the hover lands on the span, not the dead button.
+            return isReadOnly ? (
+              <Tooltip key={action.label}>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">{button}</span>
+                </TooltipTrigger>
+                <TooltipContent>Available once your account is verified</TooltipContent>
+              </Tooltip>
+            ) : (
+              <span key={action.label} className="contents">{button}</span>
+            );
+          })}
         </div>
       </div>
 

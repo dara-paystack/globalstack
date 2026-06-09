@@ -42,13 +42,14 @@
 
 import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import { Alert, AlertDescription, AlertWarningIcon } from '@paystack/pax'
+import { Alert, AlertDescription, AlertWarningIcon, AlertInformationIcon, TooltipProvider } from '@paystack/pax'
 import { Sidebar } from './Sidebar'
 import { GlobalPanel } from './GlobalPanel'
 import { GlobalSearch } from '../ui/GlobalSearch'
 import { MobileTopBar } from './MobileTopBar'
 import { usePanelContext } from '../../context/PanelContext'
 import { useMode } from '../../context/ModeContext'
+import { useAccount } from '../../context/AccountContext'
 import { useSidebar } from '../../context/SidebarContext'
 
 export function AppShell() {
@@ -56,6 +57,9 @@ export function AppShell() {
   const { isMobileOpen, isTabletExpanded, closeMobileSidebar, closeTabletExpanded } = useSidebar()
   const location = useLocation()
   const { isTestMode } = useMode()
+  // Pending (in-review) accounts get a persistent "under review" banner and a
+  // read-only dashboard (data hooks short-circuit to empty; actions disable).
+  const { isReadOnly } = useAccount()
 
   // Close detail panel and sidebar on route change.
   useEffect(() => {
@@ -73,6 +77,10 @@ export function AppShell() {
   }, [panelState.type, panelState.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
+    // Single Radix TooltipProvider for the whole dashboard — every Pax Tooltip
+    // (e.g. disabled read-only actions in PageHeader/Overview) needs a provider
+    // ancestor. delayDuration trims the default 700ms to feel responsive.
+    <TooltipProvider delayDuration={200}>
     <div className="min-h-screen bg-surface-secondary">
       {/* Skip navigation — WCAG 2.4.1 Bypass Blocks (Level A). */}
       <a
@@ -141,6 +149,17 @@ export function AppShell() {
                 </AlertDescription>
               </Alert>
             )}
+            {/* Account-under-review banner — shown while the merchant is pending
+                verification. The dashboard renders read-only (empty data, disabled
+                actions) so they can look around while we review their business. */}
+            {isReadOnly && (
+              <Alert severity="information" variant="filled" className="rounded-none border-x-0 border-t-0">
+                <AlertInformationIcon />
+                <AlertDescription>
+                  Your account is under review. You have read-only access until your business is verified — we&apos;ll email you when it&apos;s ready.
+                </AlertDescription>
+              </Alert>
+            )}
             {/* Content padding:
                 Mobile:  p-4  (16px) — tight, full viewport width in use
                 Tablet:  p-6  (24px) — more breathing room
@@ -155,5 +174,6 @@ export function AppShell() {
         </div>
       </div>
     </div>
+    </TooltipProvider>
   )
 }

@@ -12,10 +12,13 @@ import { PageHeader } from '../components/ui/PageHeader'
 import { ErrorState } from '../components/ui/ErrorState'
 import { AddEndpointModal } from '../components/ui/AddEndpointModal'
 import { usePanelContext } from '../context/PanelContext'
+import { useAccount } from '../context/AccountContext'
 import { formatRelative } from '../lib/format'
 
 export default function Webhooks() {
   usePageTitle('Webhooks')
+  // Pending (in-review) accounts have no endpoints yet — render the empty state.
+  const { isReadOnly } = useAccount()
   const [webhooks, setWebhooks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -34,6 +37,12 @@ export default function Webhooks() {
   }, [location.state?.openWebhookId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadWebhooks() {
+    if (isReadOnly) {
+      setWebhooks([])
+      setError(null)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -50,7 +59,7 @@ export default function Webhooks() {
 
   useEffect(() => {
     loadWebhooks()
-  }, [])
+  }, [isReadOnly]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleDelete(id) {
     try {

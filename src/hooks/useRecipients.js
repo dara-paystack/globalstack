@@ -10,14 +10,24 @@
 //   → { data, loading, error }
 
 import { useState, useEffect, useCallback } from 'react'
+import { useAccount } from '../context/AccountContext'
 
 export function useRecipients({ customerId = '', type = '', status = '', page = 1, limit = 15 } = {}) {
+  const { isReadOnly } = useAccount()
   const [data, setData] = useState([])
   const [meta, setMeta] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const fetchData = useCallback(async () => {
+    // Pending accounts have no recipients yet — short-circuit to empty.
+    if (isReadOnly) {
+      setData([])
+      setMeta({ total: 0, page: 1, limit, totalPages: 1 })
+      setError(null)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -38,7 +48,7 @@ export function useRecipients({ customerId = '', type = '', status = '', page = 
     } finally {
       setLoading(false)
     }
-  }, [customerId, type, status, page, limit])
+  }, [customerId, type, status, page, limit, isReadOnly])
 
   useEffect(() => {
     fetchData()

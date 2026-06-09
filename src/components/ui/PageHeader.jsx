@@ -37,7 +37,38 @@ import { Filter, X } from 'lucide-react'
 import {
   Button, Chip,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+  Tooltip, TooltipTrigger, TooltipContent,
 } from '@paystack/pax'
+import { useAccount } from '../../context/AccountContext'
+
+// Wraps an action button in a Pax tooltip when it's disabled (read-only mode).
+// A disabled <button> is inert and never fires hover, so the TooltipTrigger must
+// wrap a <span> around it (the span receives the hover and drives the tooltip).
+// When enabled we render the bare button so the flex layout is untouched.
+function ActionButton({ action, variant, color, disabled, disabledTitle }) {
+  const button = (
+    <Button
+      variant={variant}
+      color={color}
+      size="sm"
+      onClick={action.onClick}
+      disabled={disabled}
+      className="flex items-center gap-1.5 cursor-pointer"
+    >
+      {action.icon}
+      {action.label}
+    </Button>
+  )
+  if (!disabled) return button
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-flex">{button}</span>
+      </TooltipTrigger>
+      <TooltipContent>{disabledTitle}</TooltipContent>
+    </Tooltip>
+  )
+}
 
 export function PageHeader({
   title,
@@ -46,6 +77,11 @@ export function PageHeader({
   primaryAction,
   secondaryAction,
 }) {
+  // Read-only (pending) accounts can browse but not create — every page's
+  // primary/secondary action is gated here in one place rather than per page.
+  const { isReadOnly } = useAccount()
+  const actionsDisabled = isReadOnly
+  const disabledTitle = isReadOnly ? 'Available once your account is verified' : undefined
   const [panelOpen, setPanelOpen] = useState(false)
   // pendingValues holds the in-panel selections before Apply is clicked.
   // Keyed by filter id so the panel can be generic across all pages.
@@ -207,30 +243,24 @@ export function PageHeader({
 
           {/* Secondary action — outline button, appears to the left of primary */}
           {secondaryAction && (
-            <Button
+            <ActionButton
+              action={secondaryAction}
               variant="outline"
               color="secondary"
-              size="sm"
-              onClick={secondaryAction.onClick}
-              className="flex items-center gap-1.5 cursor-pointer"
-            >
-              {secondaryAction.icon}
-              {secondaryAction.label}
-            </Button>
+              disabled={actionsDisabled}
+              disabledTitle={disabledTitle}
+            />
           )}
 
           {/* Primary action — solid primary button, always far right */}
           {primaryAction && (
-            <Button
+            <ActionButton
+              action={primaryAction}
               variant="default"
               color="primary"
-              size="sm"
-              onClick={primaryAction.onClick}
-              className="flex items-center gap-1.5 cursor-pointer"
-            >
-              {primaryAction.icon}
-              {primaryAction.label}
-            </Button>
+              disabled={actionsDisabled}
+              disabledTitle={disabledTitle}
+            />
           )}
         </div>
       </div>

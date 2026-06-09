@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useMode } from '../context/ModeContext'
+// Aliased: this module already exports its own useAccount(id) detail hook.
+import { useAccount as useAccountStatus } from '../context/AccountContext'
 
 // Fetches all accounts (or filtered by owner) without pagination.
 // Used by the Accounts page banner (aggregate stats) and the Overview page.
@@ -7,11 +9,19 @@ import { useMode } from '../context/ModeContext'
 // New callers: useAccounts({ owner: 'merchant' }) — returns merchant accounts only.
 export function useAccounts({ owner = '' } = {}) {
   const { mode } = useMode()
+  const { isReadOnly } = useAccountStatus()
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const fetchData = useCallback(async () => {
+    // Pending accounts have no accounts yet — short-circuit to empty.
+    if (isReadOnly) {
+      setData([])
+      setError(null)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -26,7 +36,7 @@ export function useAccounts({ owner = '' } = {}) {
     } finally {
       setLoading(false)
     }
-  }, [mode, owner])
+  }, [mode, owner, isReadOnly])
 
   useEffect(() => {
     fetchData()
@@ -51,12 +61,21 @@ export function useCustomerAccounts({
   sort = 'balance_desc',
 } = {}) {
   const { mode } = useMode()
+  const { isReadOnly } = useAccountStatus()
   const [data, setData] = useState([])
   const [meta, setMeta] = useState({ total: 0, page: 1, limit: 15, totalPages: 1 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const fetchData = useCallback(async () => {
+    // Pending accounts hold no customer funds yet — short-circuit to empty.
+    if (isReadOnly) {
+      setData([])
+      setMeta({ total: 0, page: 1, limit, totalPages: 1 })
+      setError(null)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -79,7 +98,7 @@ export function useCustomerAccounts({
     } finally {
       setLoading(false)
     }
-  }, [mode, page, limit, search, type, sort])
+  }, [mode, page, limit, search, type, sort, isReadOnly])
 
   useEffect(() => {
     fetchData()

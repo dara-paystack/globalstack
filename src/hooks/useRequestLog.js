@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useAccount } from '../context/AccountContext'
 
 // useRequestLog — fetches the request log list with optional filters + offset pagination.
 //
@@ -21,12 +22,21 @@ export function useRequestLog({
   endpoint = '',
   dateRange = 'last_7',
 } = {}) {
+  const { isReadOnly } = useAccount()
   const [data, setData] = useState([])
   const [meta, setMeta] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const fetchData = useCallback(async () => {
+    // Pending accounts have made no API calls yet — short-circuit to empty.
+    if (isReadOnly) {
+      setData([])
+      setMeta({ total: 0, page: 1, limit, totalPages: 0 })
+      setError(null)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -48,7 +58,7 @@ export function useRequestLog({
     } finally {
       setLoading(false)
     }
-  }, [page, limit, method, statusGroup, endpoint, dateRange])
+  }, [page, limit, method, statusGroup, endpoint, dateRange, isReadOnly])
 
   useEffect(() => {
     fetchData()

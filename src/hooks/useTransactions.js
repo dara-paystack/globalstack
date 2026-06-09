@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useMode } from '../context/ModeContext'
+import { useAccount } from '../context/AccountContext'
 
 // Fetches /api/transactions with optional filters and cursor-based pagination.
 //
@@ -12,12 +13,22 @@ import { useMode } from '../context/ModeContext'
 //   { total, nextCursor, hasNext, hasPrev, limit }
 export function useTransactions({ cursor = '', limit = 10, status = '', type = '', accountId = '', recipientId = '' } = {}) {
   const { mode } = useMode()
+  const { isReadOnly } = useAccount()
   const [data, setData] = useState([])
   const [meta, setMeta] = useState({ total: 0, nextCursor: null, hasNext: false, hasPrev: false, limit: 10 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const fetchData = useCallback(async () => {
+    // Pending (in-review) accounts have no data yet — short-circuit to an empty
+    // result so the page renders its existing empty state without an API round-trip.
+    if (isReadOnly) {
+      setData([])
+      setMeta({ total: 0, nextCursor: null, hasNext: false, hasPrev: false, limit })
+      setError(null)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -40,7 +51,7 @@ export function useTransactions({ cursor = '', limit = 10, status = '', type = '
     } finally {
       setLoading(false)
     }
-  }, [cursor, limit, status, type, accountId, recipientId, mode])
+  }, [cursor, limit, status, type, accountId, recipientId, mode, isReadOnly])
 
   useEffect(() => {
     fetchData()
