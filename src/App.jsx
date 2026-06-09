@@ -45,6 +45,7 @@ import RequestLog from './pages/RequestLog'
 import LandingPage from './landing/LandingPage'
 import Signup from './pages/signup/Signup'
 import CheckEmail from './pages/signup/CheckEmail'
+import VerifyIdentity from './pages/signup/VerifyIdentity'
 
 // createBrowserRouter defines the full route tree.
 //   /            → marketing LandingPage (standalone, no AppShell chrome)
@@ -56,6 +57,7 @@ const router = createBrowserRouter([
   // the landing page. The dashboard gates on account status once they're in.
   { path: '/signup', element: <Signup /> },
   { path: '/signup/check-email', element: <CheckEmail /> },
+  { path: '/onboarding/verify', element: <VerifyIdentity /> },
   {
     // AppShell is a pathless layout route — it renders the sidebar/topbar and
     // an <Outlet /> that shows whichever dashboard child route is active.
