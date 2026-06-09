@@ -79,15 +79,18 @@ export default function Signup() {
       title="Create your account"
       backdrop={
         !isMobile && (
-          // Static globe (captured from the marketing scene). Anchored
-          // bottom-center and pushed mostly out of frame so only the top cap
-          // rises from the bottom edge. translate-y-[75%] shows ~24px more than
-          // the previous framing.
+          // Static globe (captured from the marketing scene, recentered so its
+          // sphere sits at the asset's horizontal center). Anchored bottom-center
+          // and pushed mostly out of frame so only the top cap rises from the
+          // bottom edge. translate-y is a % of the globe's own 760px height
+          // (~7.6px per 1%); 76% hides ~32px more than the 72% framing.
+          // scale-[1.12] grows it ~12% from its center (transform-origin defaults
+          // to 50% 50%) without disturbing the bottom-anchor framing above.
           <img
             src="/signup-globe.png"
             alt=""
             aria-hidden="true"
-            className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-[75%] w-[760px] h-[760px] max-w-none pointer-events-none select-none"
+            className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-[76%] scale-[1.12] w-[760px] h-[760px] max-w-none pointer-events-none select-none"
           />
         )
       }
