@@ -65,13 +65,15 @@ export default function CheckEmail() {
       {/* Resend — UI-only stub in this prototype (no real mail sends) */}
       <p className="text-xs text-content-tertiary text-center mt-5">
         Didn&apos;t get the email?{' '}
-        <button
-          type="button"
+        <Button
+          variant="text"
+          color="primary"
+          size="xs"
           onClick={() => setPreviewOpen(true)}
-          className="font-medium text-content-secondary hover:text-content-primary transition-colors cursor-pointer"
+          className="px-0 align-baseline cursor-pointer"
         >
           View it here
-        </button>
+        </Button>
       </p>
 
       <WelcomeEmailPreview
