@@ -160,13 +160,30 @@ export default function Hero() {
         transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.7, delay: 0.24, ease: [0.16, 1, 0.3, 1] }}
         className="flex items-center gap-5 mt-8"
       >
-        {/* Primary button */}
+        {/* Primary button — Sign up (the new onboarding CTA, leads the row) */}
         <a
-          href="/dashboard"
+          href="/signup"
           className="inline-flex items-center font-sans font-medium text-sm text-white hover:opacity-80 transition-opacity"
           style={{
             background: '#0E141B',
             padding: '10px 12px',
+            borderRadius: 12,
+            letterSpacing: '-0.01em',
+          }}
+        >
+          Sign up
+        </a>
+
+        {/* Sign in — outline/secondary. padding is 9px (vs Sign up's 10px) to
+            offset the 1px border, so both buttons render the same height. */}
+        <a
+          href="/dashboard"
+          className="inline-flex items-center font-sans font-medium text-sm hover:opacity-80 transition-opacity"
+          style={{
+            color: '#0E141B',
+            background: 'transparent',
+            border: '1px solid #0E141B',
+            padding: '9px 12px',
             borderRadius: 12,
             letterSpacing: '-0.01em',
           }}

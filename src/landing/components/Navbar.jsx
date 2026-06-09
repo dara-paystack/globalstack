@@ -92,8 +92,35 @@ export default function Navbar({ scrollYProgress }) {
 
         {/* Right: CTA */}
         <div className="flex items-center gap-2">
+          {/* Sign in — outline/secondary. Inverts the solid button's colors
+              (text + border use btnBg, transparent fill) so it reads as the
+              lower-emphasis action next to the solid Sign up primary. */}
           <motion.a
             href="/dashboard"
+            style={{
+              backgroundColor: 'transparent',
+              color: btnBg,
+              border: `1px solid ${btnBg}`,
+              padding: '10px 12px',
+              borderRadius: 12,
+              fontFamily: 'Inter, sans-serif',
+              fontSize: 13,
+              fontWeight: 500,
+              letterSpacing: '-0.01em',
+              display: 'inline-flex',
+              alignItems: 'center',
+              textDecoration: 'none',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+            whileHover={{ opacity: 0.82 }}
+            transition={{ duration: 0.12 }}
+          >
+            Sign in
+          </motion.a>
+          {/* Sign up — solid/primary CTA, end-cap position. */}
+          <motion.a
+            href="/signup"
             style={{
               backgroundColor: btnBg,
               color: btnColor,
@@ -114,7 +141,7 @@ export default function Navbar({ scrollYProgress }) {
             whileHover={{ opacity: 0.82 }}
             transition={{ duration: 0.12 }}
           >
-            Sign in
+            Sign up
           </motion.a>
         </div>
       </motion.div>
