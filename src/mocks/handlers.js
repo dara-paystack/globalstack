@@ -437,6 +437,44 @@ export const handlers = [
     return HttpResponse.json(newTransfer, { status: 201 })
   }),
 
+  // ── Signup ──────────────────────────────────────────────────────────────────
+  //
+  // POST /api/signup — kicks off self-service onboarding.
+  // Accepts { company, email }. In production this would create a Sumsub
+  // applicant and trigger a welcome email; here it just validates input and
+  // echoes back a fake applicant id + the Sumsub verification link. Status
+  // itself lives client-side in AccountContext, so there's no status endpoint.
+  http.post('/api/signup', async ({ request }) => {
+    await randomDelay()
+
+    const body = await request.json()
+    const company = (body.company ?? '').trim()
+    const email = (body.email ?? '').trim()
+
+    // Server-side validation mirrors the client checks — never trust the client.
+    if (!company || !email) {
+      return HttpResponse.json(
+        { error: 'Company name and email are required.' },
+        { status: 400 },
+      )
+    }
+
+    const applicantId = 'apl_' + Math.random().toString(36).slice(2, 10)
+
+    return HttpResponse.json(
+      {
+        applicantId,
+        company,
+        email,
+        // The shared Sumsub sandbox WebSDK link — both the welcome email CTA
+        // and the in-dashboard handoff route point here (Dara: both paths valid).
+        sumsubLink: 'https://in.sumsub.com/websdk/p/sbx_GhNId8z1kLGG04yX',
+        status: 'created',
+      },
+      { status: 201 },
+    )
+  }),
+
   // ── Team ──────────────────────────────────────────────────────────────────────
   //
   // Returns all team members. No mode separation — team membership is real
