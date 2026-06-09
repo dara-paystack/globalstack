@@ -6,7 +6,6 @@
 // ── Product / Hero ────────────────────────────────────────────────────────
 export const HERO_HEADLINE = 'Move money across Africa and the world. In seconds.'
 export const HERO_BODY = 'One API to accept, hold, convert, and pay out funds across 12 currencies in 18 African markets, powered by stablecoin infrastructure.'
-export const HERO_STATUS = 'NOW IN PRIVATE BETA'
 
 // ── How It Works ──────────────────────────────────────────────────────────
 export const HOW_HEADLINE = 'One API. Every direction money moves.'

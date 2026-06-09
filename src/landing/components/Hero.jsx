@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, useReducedMotion } from 'framer-motion'
-import { HERO_HEADLINE, HERO_BODY, HERO_STATUS } from '../data/copy'
+import { HERO_HEADLINE, HERO_BODY } from '../data/copy'
 
 const COL_PX = 'clamp(40px, 6vw, 120px)'
 
@@ -203,17 +203,6 @@ export default function Hero() {
           Read the docs
           <span aria-hidden="true">→</span>
         </a>
-      </motion.div>
-
-      {/* Section label */}
-      <motion.div
-        initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
-        animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }}
-        transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.7, delay: 0.28, ease: [0.16, 1, 0.3, 1] }}
-        className="font-mono text-[11px] uppercase"
-        style={{ letterSpacing: '0.12em', color: '#C8420E', marginTop: '10rem' }}
-      >
-        [ {HERO_STATUS} ]
       </motion.div>
     </section>
   )
