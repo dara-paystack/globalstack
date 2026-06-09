@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { TextInput, Button } from '@paystack/pax'
 import { useAccount } from '../../context/AccountContext'
 import { OnboardingShell } from '../../components/layout/OnboardingShell'
+import { useIsMobile } from '../../landing/hooks/useIsMobile'
 
 // Signup — the first screen of self-service onboarding.
 //
@@ -20,6 +21,10 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export default function Signup() {
   const navigate = useNavigate()
   const { register } = useAccount()
+
+  // Globe backdrop is decorative and desktop-only — on mobile the form should
+  // own the full screen.
+  const isMobile = useIsMobile(1024)
 
   const [company, setCompany] = useState('')
   const [email, setEmail] = useState('')
@@ -70,7 +75,23 @@ export default function Signup() {
   }
 
   return (
-    <OnboardingShell title="Create your account">
+    <OnboardingShell
+      title="Create your account"
+      backdrop={
+        !isMobile && (
+          // Static globe (captured from the marketing scene). Anchored
+          // bottom-center and pushed mostly out of frame so only the top cap
+          // rises from the bottom edge. translate-y-[75%] shows ~24px more than
+          // the previous framing.
+          <img
+            src="/signup-globe.png"
+            alt=""
+            aria-hidden="true"
+            className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-[75%] w-[760px] h-[760px] max-w-none pointer-events-none select-none"
+          />
+        )
+      }
+    >
       {/* Form-level error (e.g. server rejected the request) */}
       {errors.form && (
         <div
