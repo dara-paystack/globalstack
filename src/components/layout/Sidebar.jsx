@@ -23,13 +23,18 @@
 //   CSS: isTabletExpanded ? 'block' : 'block md:hidden lg:block'
 //   Means: always show except on tablet-collapsed.
 
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, Users, KeyRound, Webhook,
   ClipboardList, Contact, UsersRound, Terminal, ChevronRight, ChevronLeft, X,
+  ChevronsUpDown, LogOut,
 } from 'lucide-react'
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+} from '@paystack/pax'
 import { useMode } from '../../context/ModeContext'
 import { useSidebar } from '../../context/SidebarContext'
+import { useAccount } from '../../context/AccountContext'
 
 const NAV_MAIN = [
   { to: '/dashboard', label: 'Overview', end: true, icon: LayoutDashboard },
@@ -90,9 +95,19 @@ function NavItem({ to, label, end, icon: Icon }) {
 export function Sidebar() {
   const { setMode, isTestMode } = useMode()
   const { isMobileOpen, isTabletExpanded, closeMobileSidebar, toggleTabletExpanded } = useSidebar()
+  const { reset } = useAccount()
+  const navigate = useNavigate()
 
   function toggleMode() {
     setMode(isTestMode ? 'live' : 'test')
+  }
+
+  // Log out — no real auth in this prototype, so "log out" means clear the
+  // persisted account (reset() → defaults) and return to the marketing landing.
+  // Same semantics as RejectedState's logout.
+  function handleLogout() {
+    reset()
+    navigate('/')
   }
 
   // Visibility helpers for elements that show on mobile + desktop but hide on
@@ -223,23 +238,59 @@ export function Sidebar() {
         }
       </button>
 
-      {/* ── Merchant identity ───────────────────────────────────────────────── */}
-      <div className="px-5 py-4 border-t border-border-primary-light shrink-0">
-        <div className="flex items-center gap-3">
-          {/* Avatar initials — always shown */}
-          <div className="w-8 h-8 rounded-full bg-action-primary-main flex items-center justify-center text-content-inverse text-xs font-semibold shrink-0">
-            AC
-          </div>
-          {/* Name + email — mobile + desktop + tablet-expanded */}
-          <div className={`min-w-0 ${showOnMobileAndDesktop()}`}>
-            <div className="text-sm font-medium text-content-primary truncate">
-              Acme Corp
+      {/* ── Merchant identity + account menu ────────────────────────────────── */}
+      {/* The whole identity row is the dropdown trigger. Clicking it opens an
+          upward-anchored menu (side="top") whose only item is Log out.
+          NOTE: Pax's DropdownMenuTrigger renders its OWN <button> and spreads
+          props onto it — it does NOT support asChild. So we style the trigger
+          directly (className + children land on Pax's button). Wrapping our own
+          <button> in asChild would nest a button-in-button and the visible row
+          would size to content, not full width. */}
+      <div className="border-t border-border-primary-light shrink-0">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label="Account menu"
+            className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-surface-secondary transition-colors cursor-pointer"
+          >
+            {/* Avatar initials — always shown (the only visible part on the
+                56px tablet rail, where it's still clickable) */}
+            <div className="w-8 h-8 rounded-full bg-action-primary-main flex items-center justify-center text-content-inverse text-xs font-semibold shrink-0">
+              AC
             </div>
-            <div className="text-xs text-content-tertiary truncate">
-              treasury@acme.com
+            {/* Name + email — mobile + desktop + tablet-expanded */}
+            <div className={`min-w-0 flex-1 ${showOnMobileAndDesktop()}`}>
+              <div className="text-sm font-medium text-content-primary truncate">
+                Acme Corp
+              </div>
+              <div className="text-xs text-content-tertiary truncate">
+                treasury@acme.com
+              </div>
             </div>
-          </div>
-        </div>
+            {/* Affordance cue — signals the row is interactive. Hidden on the
+                collapsed tablet rail (shares the name/email visibility). */}
+            <ChevronsUpDown
+              width={15}
+              height={15}
+              strokeWidth={1.75}
+              className={`shrink-0 text-content-tertiary ${showOnMobileAndDesktop()}`}
+            />
+          </DropdownMenuTrigger>
+          {/* Width tracks the trigger (= the full sidebar width) via Radix's
+              --radix-dropdown-menu-trigger-width var, so the menu never spills
+              past the sidebar edge. min-w floors it at 180px so "Log out" stays
+              readable on the 56px collapsed tablet rail, where a pure width match
+              would be unusably narrow. */}
+          <DropdownMenuContent
+            side="top"
+            align="start"
+            className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[180px]"
+          >
+            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+              <LogOut width={15} height={15} strokeWidth={1.75} />
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </aside>
   )

@@ -1,5 +1,6 @@
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@paystack/pax'
-import { ShieldX } from 'lucide-react'
+import { ShieldX, LogOut } from 'lucide-react'
 import { useAccount } from '../../context/AccountContext'
 
 // RejectedState — the terminal "verification unsuccessful" state.
@@ -13,10 +14,20 @@ import { useAccount } from '../../context/AccountContext'
 // wordmark, lucide icon marker. The one action is "Contact support" — in a real
 // product the next step is a human conversation, not a self-serve retry.
 //
-// In this prototype there's no real verdict; the demo switcher (Sidebar) is what
+// In this prototype there's no real verdict; the floating demo switcher is what
 // flips an account into and out of this state.
+//
+// LOG OUT: a rejected merchant would otherwise be stranded here. With no real
+// auth, "log out" means clear the account state (reset() → defaults, wipes the
+// persisted company/email) and return to the marketing landing page.
 export default function RejectedState() {
-  const { company } = useAccount()
+  const navigate = useNavigate()
+  const { company, reset } = useAccount()
+
+  function handleLogout() {
+    reset()
+    navigate('/')
+  }
 
   return (
     <div className="min-h-screen bg-surface-secondary flex flex-col items-center justify-center px-4 py-10">
@@ -62,15 +73,19 @@ export default function RejectedState() {
           </div>
         </div>
 
-        <p className="text-sm text-content-secondary text-center mt-6">
-          Questions? Reach us at{' '}
-          <a
-            href="mailto:support@globalstack.com"
-            className="font-medium text-content-primary hover:opacity-70 transition-opacity"
+        {/* Log out — the escape hatch, sitting where the support footer used to.
+            Without it a rejected merchant is stranded on this screen (no sidebar,
+            no nav). reset() wipes the persisted account and returns to landing.
+            A quiet text button keeps it secondary to "Contact support" above. */}
+        <div className="text-center mt-6">
+          <button
+            onClick={handleLogout}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-content-secondary hover:text-content-primary transition-colors cursor-pointer"
           >
-            support@globalstack.com
-          </a>
-        </p>
+            <LogOut width={15} height={15} strokeWidth={1.75} />
+            Log out
+          </button>
+        </div>
       </div>
     </div>
   )
