@@ -47,6 +47,7 @@ import { Sidebar } from './Sidebar'
 import { GlobalPanel } from './GlobalPanel'
 import { GlobalSearch } from '../ui/GlobalSearch'
 import { MobileTopBar } from './MobileTopBar'
+import { DemoStatusSwitcher } from './DemoStatusSwitcher'
 import { usePanelContext } from '../../context/PanelContext'
 import { useMode } from '../../context/ModeContext'
 import { useAccount } from '../../context/AccountContext'
@@ -82,7 +83,14 @@ export function AppShell() {
   // hooks have run, so the rules of hooks hold) and render the full-page rejected
   // screen instead of the Sidebar/main/panel layout.
   if (isRejected) {
-    return <RejectedState />
+    // DemoStatusSwitcher rides alongside the rejected screen so you can flip back
+    // out of it — the sidebar (its sibling in the normal branch) isn't rendered here.
+    return (
+      <>
+        <RejectedState />
+        <DemoStatusSwitcher />
+      </>
+    )
   }
 
   return (
@@ -182,6 +190,8 @@ export function AppShell() {
           <GlobalPanel />
         </div>
       </div>
+      {/* Prototype-only: flip account status (approved/pending/rejected) live. */}
+      <DemoStatusSwitcher />
     </div>
     </TooltipProvider>
   )
