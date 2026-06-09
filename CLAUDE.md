@@ -486,6 +486,7 @@ DO NOT
 - Do not add features not listed above — keep scope clean
 - Do not leave CLAUDE.md stale — update after every major piece of work
 - Do not use text-content-quaternary except for disabled/absent/placeholder states
+- Do not add Co-Authored-By trailers or any Claude/AI attribution to git commits or PRs
 
 ═══════════════════════════════════════════════════════════
 RESPONSIVE SYSTEM
