@@ -51,6 +51,7 @@ import { usePanelContext } from '../../context/PanelContext'
 import { useMode } from '../../context/ModeContext'
 import { useAccount } from '../../context/AccountContext'
 import { useSidebar } from '../../context/SidebarContext'
+import RejectedState from '../../pages/signup/RejectedState'
 
 export function AppShell() {
   const { closePanel, panelState } = usePanelContext()
@@ -59,7 +60,8 @@ export function AppShell() {
   const { isTestMode } = useMode()
   // Pending (in-review) accounts get a persistent "under review" banner and a
   // read-only dashboard (data hooks short-circuit to empty; actions disable).
-  const { isReadOnly } = useAccount()
+  // Rejected accounts get NO dashboard at all — see the early return below.
+  const { isReadOnly, isRejected } = useAccount()
 
   // Close detail panel and sidebar on route change.
   useEffect(() => {
@@ -75,6 +77,13 @@ export function AppShell() {
       closeMobileSidebar()
     }
   }, [panelState.type, panelState.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Rejected accounts never reach the dashboard chrome. We gate here (after all
+  // hooks have run, so the rules of hooks hold) and render the full-page rejected
+  // screen instead of the Sidebar/main/panel layout.
+  if (isRejected) {
+    return <RejectedState />
+  }
 
   return (
     // Single Radix TooltipProvider for the whole dashboard — every Pax Tooltip
