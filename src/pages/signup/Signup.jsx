@@ -70,10 +70,7 @@ export default function Signup() {
   }
 
   return (
-    <OnboardingShell
-      title="Create your account"
-      subtitle="Tell us about your business to get started. We'll guide you through verification next."
-    >
+    <OnboardingShell title="Create your account">
       {/* Form-level error (e.g. server rejected the request) */}
       {errors.form && (
         <div
@@ -144,12 +141,14 @@ export default function Signup() {
 
       {/* Returning users — Sign in currently routes into the dashboard.
           TODO(magic-link login): when the magic-link login feature lands,
-          repoint this "/dashboard" href to the real login route. */}
+          repoint this "/dashboard" href to the real login route.
+          asChild renders the Pax text Button onto a real <a>; px-0 keeps it
+          flush so it reads inline with the preceding sentence. */}
       <p className="text-sm text-content-secondary text-center mt-6">
         Already have an account?{' '}
-        <a href="/dashboard" className="font-medium text-content-primary hover:opacity-70 transition-opacity">
-          Sign in
-        </a>
+        <Button asChild variant="text" color="primary" size="xs" className="px-0 align-baseline cursor-pointer">
+          <a href="/dashboard">Sign in</a>
+        </Button>
       </p>
     </OnboardingShell>
   )

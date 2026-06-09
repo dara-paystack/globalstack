@@ -15,37 +15,41 @@
 // scale) means a future shell tweak propagates to all four screens at once.
 export function OnboardingShell({ icon, title, subtitle, children }) {
   return (
-    <div className="min-h-screen bg-surface-primary flex flex-col items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md">
-        {/* Wordmark — centered, links home. Plain text per brand (no logo asset). */}
-        <div className="text-center">
-          <a
-            href="/"
-            className="inline-block text-lg font-semibold tracking-tight text-content-primary hover:opacity-70 transition-opacity"
-          >
-            GlobalStack
-          </a>
+    <div className="min-h-screen bg-surface-primary flex flex-col px-4 py-8">
+      {/* Logo — pinned to the top of the page, links home. Same asset the
+          dashboard sidebar uses (/globalstack-logo.svg), at 24px for this
+          focal auth screen. */}
+      <div className="flex justify-center">
+        <a href="/" className="inline-block hover:opacity-70 transition-opacity">
+          <img src="/globalstack-logo.svg" alt="GlobalStack" className="h-6 w-auto" />
+        </a>
+      </div>
+
+      {/* Everything else sits centered in the remaining space. flex-1 lets this
+          region absorb the leftover height so the column reads optically centered
+          below the top-pinned logo. */}
+      <div className="flex-1 flex flex-col items-center justify-center">
+        <div className="w-full max-w-sm">
+          {/* Optional icon marker — CheckEmail / VerifyIdentity / RejectedState use one. */}
+          {icon && <div className="flex justify-center">{icon}</div>}
+
+          {/* Title — 20px / semibold, centered. mt only when an icon sits above it. */}
+          {title && (
+            <h1
+              className={`text-xl font-semibold text-content-primary text-center ${icon ? 'mt-4' : ''}`}
+            >
+              {title}
+            </h1>
+          )}
+
+          {/* Subtitle — 14px, centered. */}
+          {subtitle && (
+            <p className="text-sm text-content-secondary text-center mt-2">{subtitle}</p>
+          )}
+
+          {/* Content slot — forms / actions / footer links, alignment left to the screen. */}
+          <div className="mt-8">{children}</div>
         </div>
-
-        {/* Optional icon marker — CheckEmail / VerifyIdentity / RejectedState use one. */}
-        {icon && <div className="mt-8 flex justify-center">{icon}</div>}
-
-        {/* Title — 20px / semibold, centered. mt tightens when an icon sits above it. */}
-        {title && (
-          <h1
-            className={`text-xl font-semibold text-content-primary text-center ${icon ? 'mt-4' : 'mt-8'}`}
-          >
-            {title}
-          </h1>
-        )}
-
-        {/* Subtitle — 14px, centered. */}
-        {subtitle && (
-          <p className="text-sm text-content-secondary text-center mt-2">{subtitle}</p>
-        )}
-
-        {/* Content slot — forms / actions / footer links, alignment left to the screen. */}
-        <div className="mt-8">{children}</div>
       </div>
     </div>
   )
