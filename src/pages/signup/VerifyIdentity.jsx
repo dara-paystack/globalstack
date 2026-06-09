@@ -33,8 +33,6 @@ export default function VerifyIdentity() {
 
   return (
     <OnboardingShell
-      title="Verify your business"
-      subtitle="Complete the steps below to verify your business. This is handled securely by Sumsub."
       maxWidth="max-w-2xl"
       align="top"
     >
@@ -54,18 +52,16 @@ export default function VerifyIdentity() {
       </div>
 
       {/* Fallback for when the iframe is blocked from framing. Centered to sit
-          with the cardless, centered layout. */}
+          with the cardless, centered layout. The link is a Pax text button
+          (asChild → real <a>) to match the other inline text CTAs in onboarding. */}
       <p className="text-xs text-content-tertiary mt-3 flex items-center justify-center gap-1.5">
         Having trouble loading the verification?
-        <a
-          href={SUMSUB_SANDBOX_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 font-medium text-content-secondary hover:text-content-primary transition-colors"
-        >
-          Open in a new tab
-          <ExternalLink width={12} height={12} strokeWidth={2} />
-        </a>
+        <Button asChild variant="text" color="primary" size="xs" className="px-0 align-baseline cursor-pointer">
+          <a href={SUMSUB_SANDBOX_URL} target="_blank" rel="noopener noreferrer">
+            Open in a new tab
+            <ExternalLink width={12} height={12} strokeWidth={2} />
+          </a>
+        </Button>
       </p>
 
       {/* Advance the flow. In production this would be gated on Sumsub's
