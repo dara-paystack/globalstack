@@ -15,7 +15,7 @@
 // scale) means a future shell tweak propagates to all four screens at once.
 export function OnboardingShell({ icon, title, subtitle, children }) {
   return (
-    <div className="min-h-screen bg-surface-primary flex flex-col px-4 py-8">
+    <div className="min-h-screen bg-surface-primary flex flex-col px-4 pt-2 pb-8">
       {/* Logo — pinned to the top of the page, links home. Same asset the
           dashboard sidebar uses (/globalstack-logo.svg), at 24px for this
           focal auth screen. */}
