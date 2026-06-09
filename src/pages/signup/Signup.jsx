@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TextInput, Button } from '@paystack/pax'
 import { useAccount } from '../../context/AccountContext'
+import { OnboardingShell } from '../../components/layout/OnboardingShell'
 
 // Signup — the first screen of self-service onboarding.
 //
@@ -69,101 +70,87 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-secondary flex flex-col items-center justify-center px-4 py-10">
-      <div className="w-full max-w-[440px]">
-        {/* Wordmark — links home. Plain text keeps this screen decoupled from
-            the landing page's animated logo component. */}
-        <a
-          href="/"
-          className="inline-block mb-8 text-lg font-semibold tracking-tight text-content-primary hover:opacity-70 transition-opacity"
+    <OnboardingShell
+      title="Create your account"
+      subtitle="Tell us about your business to get started. We'll guide you through verification next."
+    >
+      {/* Form-level error (e.g. server rejected the request) */}
+      {errors.form && (
+        <div
+          role="alert"
+          className="px-3 py-2.5 rounded-lg bg-feedback-danger-light border border-feedback-danger-border"
         >
-          GlobalStack
-        </a>
+          <p className="text-xs text-feedback-danger-main">{errors.form}</p>
+        </div>
+      )}
 
-        <div className="bg-surface-primary border border-border-default rounded-2xl p-6 md:p-8 shadow-sm">
-          <h1 className="text-2xl font-medium text-content-primary">Create your account</h1>
-          <p className="text-sm text-content-secondary mt-1.5">
-            Tell us about your business to get started. We&apos;ll guide you through verification next.
-          </p>
-
-          {/* Form-level error (e.g. server rejected the request) */}
-          {errors.form && (
-            <div
-              role="alert"
-              className="mt-4 px-3 py-2.5 rounded-lg bg-feedback-danger-light border border-feedback-danger-border"
-            >
-              <p className="text-xs text-feedback-danger-main">{errors.form}</p>
-            </div>
+      {/* noValidate: we run our own validation rather than the browser's,
+          so error styling and copy stay consistent with the design system.
+          Labels stay left-aligned inside the centered column. */}
+      <form onSubmit={handleSubmit} noValidate className={`space-y-5 ${errors.form ? 'mt-5' : ''}`}>
+        <div>
+          <label htmlFor="signup-company" className="text-sm font-medium text-content-primary mb-2 block">
+            Company name
+          </label>
+          <TextInput
+            id="signup-company"
+            type="text"
+            autoFocus
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            placeholder="Acme Corp"
+            aria-invalid={errors.company ? 'true' : undefined}
+            aria-describedby={errors.company ? 'signup-company-error' : undefined}
+            className="w-full"
+          />
+          {errors.company && (
+            <p id="signup-company-error" className="mt-1.5 text-xs text-feedback-danger-main">
+              {errors.company}
+            </p>
           )}
-
-          {/* noValidate: we run our own validation rather than the browser's,
-              so error styling and copy stay consistent with the design system. */}
-          <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-5">
-            <div>
-              <label htmlFor="signup-company" className="text-sm font-medium text-content-primary mb-2 block">
-                Company name
-              </label>
-              <TextInput
-                id="signup-company"
-                type="text"
-                autoFocus
-                value={company}
-                onChange={(e) => setCompany(e.target.value)}
-                placeholder="Acme Corp"
-                aria-invalid={errors.company ? 'true' : undefined}
-                aria-describedby={errors.company ? 'signup-company-error' : undefined}
-                className="w-full"
-              />
-              {errors.company && (
-                <p id="signup-company-error" className="mt-1.5 text-xs text-feedback-danger-main">
-                  {errors.company}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="signup-email" className="text-sm font-medium text-content-primary mb-2 block">
-                Work email
-              </label>
-              <TextInput
-                id="signup-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@acme.com"
-                aria-invalid={errors.email ? 'true' : undefined}
-                aria-describedby={errors.email ? 'signup-email-error' : undefined}
-                className="w-full"
-              />
-              {errors.email && (
-                <p id="signup-email-error" className="mt-1.5 text-xs text-feedback-danger-main">
-                  {errors.email}
-                </p>
-              )}
-            </div>
-
-            <Button
-              type="submit"
-              variant="default"
-              color="primary"
-              disabled={submitting}
-              className="w-full cursor-pointer"
-            >
-              {submitting ? 'Creating account…' : 'Continue'}
-            </Button>
-          </form>
         </div>
 
-        {/* Returning users — Sign in currently routes into the dashboard.
-            TODO(magic-link login): when the magic-link login feature lands,
-            repoint this "/dashboard" href to the real login route. */}
-        <p className="text-sm text-content-secondary text-center mt-6">
-          Already have an account?{' '}
-          <a href="/dashboard" className="font-medium text-content-primary hover:opacity-70 transition-opacity">
-            Sign in
-          </a>
-        </p>
-      </div>
-    </div>
+        <div>
+          <label htmlFor="signup-email" className="text-sm font-medium text-content-primary mb-2 block">
+            Work email
+          </label>
+          <TextInput
+            id="signup-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@acme.com"
+            aria-invalid={errors.email ? 'true' : undefined}
+            aria-describedby={errors.email ? 'signup-email-error' : undefined}
+            className="w-full"
+          />
+          {errors.email && (
+            <p id="signup-email-error" className="mt-1.5 text-xs text-feedback-danger-main">
+              {errors.email}
+            </p>
+          )}
+        </div>
+
+        <Button
+          type="submit"
+          variant="default"
+          color="primary"
+          disabled={submitting}
+          className="w-full cursor-pointer"
+        >
+          {submitting ? 'Creating account…' : 'Continue'}
+        </Button>
+      </form>
+
+      {/* Returning users — Sign in currently routes into the dashboard.
+          TODO(magic-link login): when the magic-link login feature lands,
+          repoint this "/dashboard" href to the real login route. */}
+      <p className="text-sm text-content-secondary text-center mt-6">
+        Already have an account?{' '}
+        <a href="/dashboard" className="font-medium text-content-primary hover:opacity-70 transition-opacity">
+          Sign in
+        </a>
+      </p>
+    </OnboardingShell>
   )
 }
