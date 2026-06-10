@@ -475,6 +475,36 @@ export const handlers = [
     )
   }),
 
+  // ── Login ───────────────────────────────────────────────────────────────────
+  //
+  // POST /api/login — passwordless sign-in for returning users.
+  // Accepts { email }. In production this would look up the account and email a
+  // magic link; here it validates the email and returns a fake token. There's
+  // deliberately no "account exists" check — surfacing whether an email is
+  // registered is an enumeration leak, so real magic-link flows respond the same
+  // way regardless. Auth state itself lives client-side in AccountContext.
+  http.post('/api/login', async ({ request }) => {
+    await randomDelay()
+
+    const body = await request.json()
+    const email = (body.email ?? '').trim()
+
+    // Server-side validation mirrors the client check — never trust the client.
+    if (!email) {
+      return HttpResponse.json(
+        { error: 'Email is required.' },
+        { status: 400 },
+      )
+    }
+
+    const magicLinkToken = 'mlt_' + Math.random().toString(36).slice(2, 10)
+
+    return HttpResponse.json(
+      { email, magicLinkToken, status: 'sent' },
+      { status: 200 },
+    )
+  }),
+
   // ── Team ──────────────────────────────────────────────────────────────────────
   //
   // Returns all team members. No mode separation — team membership is real

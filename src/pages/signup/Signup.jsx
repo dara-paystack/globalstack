@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TextInput, Button } from '@paystack/pax'
 import { useAccount } from '../../context/AccountContext'
-import { OnboardingShell } from '../../components/layout/OnboardingShell'
+import { OnboardingShell, ONBOARDING_FORM_GAP, ONBOARDING_FIELD_GAP } from '../../components/layout/OnboardingShell'
 import { useIsMobile } from '../../landing/hooks/useIsMobile'
 
 // Signup — the first screen of self-service onboarding.
@@ -108,48 +108,52 @@ export default function Signup() {
       {/* noValidate: we run our own validation rather than the browser's,
           so error styling and copy stay consistent with the design system.
           Labels stay left-aligned inside the centered column. */}
-      <form onSubmit={handleSubmit} noValidate className={`space-y-5 ${errors.form ? 'mt-5' : ''}`}>
-        <div>
-          <label htmlFor="signup-company" className="text-sm font-medium text-content-primary mb-2 block">
-            Company name
-          </label>
-          <TextInput
-            id="signup-company"
-            type="text"
-            autoFocus
-            value={company}
-            onChange={(e) => setCompany(e.target.value)}
-            placeholder="Acme Corp"
-            aria-invalid={errors.company ? 'true' : undefined}
-            aria-describedby={errors.company ? 'signup-company-error' : undefined}
-            className="w-full"
-          />
-          {errors.company && (
-            <p id="signup-company-error" className="mt-1.5 text-xs text-feedback-danger-main">
-              {errors.company}
-            </p>
-          )}
-        </div>
+      <form onSubmit={handleSubmit} noValidate className={`${ONBOARDING_FORM_GAP} ${errors.form ? 'mt-5' : ''}`}>
+        {/* Field group — multiple inputs keep their own tighter 20px rhythm,
+            independent of the 24px gap the form puts between this group and the CTA. */}
+        <div className={ONBOARDING_FIELD_GAP}>
+          <div>
+            <label htmlFor="signup-company" className="text-sm font-medium text-content-primary mb-2 block">
+              Company name
+            </label>
+            <TextInput
+              id="signup-company"
+              type="text"
+              autoFocus
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
+              placeholder="Acme Corp"
+              aria-invalid={errors.company ? 'true' : undefined}
+              aria-describedby={errors.company ? 'signup-company-error' : undefined}
+              className="w-full"
+            />
+            {errors.company && (
+              <p id="signup-company-error" className="mt-1.5 text-xs text-feedback-danger-main">
+                {errors.company}
+              </p>
+            )}
+          </div>
 
-        <div>
-          <label htmlFor="signup-email" className="text-sm font-medium text-content-primary mb-2 block">
-            Work email
-          </label>
-          <TextInput
-            id="signup-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@acme.com"
-            aria-invalid={errors.email ? 'true' : undefined}
-            aria-describedby={errors.email ? 'signup-email-error' : undefined}
-            className="w-full"
-          />
-          {errors.email && (
-            <p id="signup-email-error" className="mt-1.5 text-xs text-feedback-danger-main">
-              {errors.email}
-            </p>
-          )}
+          <div>
+            <label htmlFor="signup-email" className="text-sm font-medium text-content-primary mb-2 block">
+              Work email
+            </label>
+            <TextInput
+              id="signup-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@acme.com"
+              aria-invalid={errors.email ? 'true' : undefined}
+              aria-describedby={errors.email ? 'signup-email-error' : undefined}
+              className="w-full"
+            />
+            {errors.email && (
+              <p id="signup-email-error" className="mt-1.5 text-xs text-feedback-danger-main">
+                {errors.email}
+              </p>
+            )}
+          </div>
         </div>
 
         <Button
@@ -163,15 +167,13 @@ export default function Signup() {
         </Button>
       </form>
 
-      {/* Returning users — Sign in currently routes into the dashboard.
-          TODO(magic-link login): when the magic-link login feature lands,
-          repoint this "/dashboard" href to the real login route.
+      {/* Returning users — route to the magic-link login.
           asChild renders the Pax text Button onto a real <a>; px-0 keeps it
           flush so it reads inline with the preceding sentence. */}
       <p className="text-sm text-content-secondary text-center mt-6">
         Already have an account?{' '}
         <Button asChild variant="text" color="primary" size="xs" className="px-0 align-baseline cursor-pointer">
-          <a href="/dashboard">Sign in</a>
+          <a href="/login">Sign in</a>
         </Button>
       </p>
     </OnboardingShell>

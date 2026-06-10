@@ -18,6 +18,19 @@
 //   Signup/CheckEmail/Rejected forms); VerifyIdentity widens it for the iframe.
 // align — 'center' optically centers short content; 'top' anchors tall content
 //   (the Sumsub iframe) just under the logo so it never overflows off-screen.
+
+// Onboarding form vertical rhythm. Two distinct gaps, owned here with the shell
+// that owns onboarding layout, so one tweak restyles every onboarding form
+// (Signup, Login) at once instead of editing each <form>.
+//
+// FORM_GAP — the gap between the field group and the primary CTA (form-level).
+// FIELD_GAP — the gap between sibling input fields, when there's more than one.
+//   Group multiple fields in a wrapper div with FIELD_GAP so the tighter
+//   field-to-field rhythm stays independent of the looser fields-to-CTA gap.
+//   A single field needs no wrapper — FORM_GAP already sits it 24px off the CTA.
+export const ONBOARDING_FORM_GAP = 'space-y-6' // 24px
+export const ONBOARDING_FIELD_GAP = 'space-y-5' // 20px
+
 export function OnboardingShell({
   icon,
   title,
