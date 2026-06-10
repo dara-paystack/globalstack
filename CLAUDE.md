@@ -21,10 +21,14 @@ accessible from every page — passing it as a prop through 4 component layers
 would be messy and brittle" is useful. "This is a React pattern" is not.
 
 ═══════════════════════════════════════════════════════════
-CURRENT STATUS — Updated Mar 19, 2026
+CURRENT STATUS — Updated Jun 10, 2026
 ═══════════════════════════════════════════════════════════
 
-All pages are built and functional. Last completed: Step 31 (Responsive layout).
+All pages are built and functional. Latest work (feat/signup-flow branch):
+self-service onboarding — Signup → Check email → Sumsub handoff, plus three
+account states (approved / pending / rejected), plus a passwordless magic-link
+login for returning users. See SELF-SERVICE ONBOARDING section below. Not yet
+merged to main.
 
 PAGES BUILT (all dashboard pages are under /dashboard — paths below omit the prefix):
   BUSINESS section:
@@ -59,6 +63,95 @@ GLOBAL FEATURES:
   - Push panel system (GlobalPanel.jsx at AppShell level, 420px, width animation)
   - Test/Live mode toggle (pill in Sidebar wordmark row)
   - Fully responsive: mobile (360px+), tablet (768px+), desktop (1280px+)
+  - Self-service onboarding + account-status gating (see dedicated section below)
+
+═══════════════════════════════════════════════════════════
+SELF-SERVICE ONBOARDING (feat/signup-flow)
+═══════════════════════════════════════════════════════════
+
+Self-service signup layered onto the existing dashboard. Standalone screens
+(no AppShell chrome), then the dashboard gates on account status.
+
+FLOW (signup):
+  /signup            Signup.jsx — collects company name + work email only (no
+                     password; login is a separate magic-link feature). POSTs
+                     /api/signup, calls register(), routes to check-email.
+  /signup/check-email  CheckEmail.jsx — "check your email" + two equivalent
+                     paths forward: "Continue verification" (in-app) and
+                     "Preview welcome email" (WelcomeEmailPreview.jsx modal).
+  /onboarding/verify VerifyIdentity.jsx — Sumsub handoff. Embeds the sandbox
+                     WebSDK in an iframe + unconditional "open in new tab"
+                     fallback (cross-origin frames can refuse to embed and the
+                     parent can't detect it). "I've finished" → setStatus('pending').
+
+FLOW (login — returning users, passwordless magic link):
+  /login             Login.jsx — collects work email only. POSTs /api/login,
+                     routes to check-email. ROUTING-ONLY: does NOT touch
+                     AccountContext, so the persisted status drives what the
+                     dashboard shows. Shares Signup's frame + globe backdrop.
+  /login/check-email LoginCheckEmail.jsx — mirrors signup CheckEmail. No real
+                     mail/auth, so "Continue to dashboard" simulates clicking
+                     the magic link → navigate('/dashboard'). AppShell then
+                     renders whatever status is persisted (approved/pending/
+                     rejected). "Sign in" CTAs (Signup footer, landing Navbar +
+                     Hero) all point here.
+
+ACCOUNT STATE — context/AccountContext.jsx, useAccount():
+  status: 'approved' | 'pending' | 'rejected'  (localStorage, key globalstack.account)
+  DEFAULT is 'approved' — anyone arriving via the existing /dashboard "Sign in"
+  CTA sees the dashboard exactly as before. Only going through /signup +
+  finishing verification moves you to 'pending'.
+  API: register({company,email}) (captures identity, does NOT flip status),
+       setStatus(status), reset() (→ defaults, used by log out).
+  Derived: isReadOnly (status==='pending'), isRejected (status==='rejected').
+  WHY localStorage (unlike in-memory ModeContext): survives the round-trip out
+  to Sumsub and back, and a stakeholder demo shouldn't reset on refresh.
+  Provider is OUTERMOST in App.jsx so status is readable from landing CTAs,
+  standalone signup routes, AppShell gating, Sidebar, and every data hook.
+
+THREE DASHBOARD STATES (gated in AppShell.jsx):
+  approved — full dashboard (existing experience).
+  pending  — read-only: information banner at top of <main> ("under review"),
+             and every data hook short-circuits to empty when isReadOnly (no
+             API round-trip) so pages render their existing empty states.
+             All six list hooks honor isReadOnly (useTransactions, useAccounts,
+             useCustomers, useRecipients, useRequestLog, useTransfers).
+  rejected — AppShell early-returns the full-page RejectedState.jsx (no
+             sidebar/nav at all). One action: "Contact support" (mailto) +
+             "Log out".
+
+DEMO-ONLY (would not ship — flagged in code):
+  DemoStatusSwitcher.jsx — fixed bottom-right overlay to flip approved/pending/
+    rejected live without re-running signup. Mounted by AppShell in BOTH branches
+    (normal + rejected early-return) so it stays reachable even in rejected,
+    which removes the sidebar. In production status comes from Sumsub's verdict.
+  "Preview welcome email" CTA on CheckEmail — inspect the designed email artifact.
+
+LOG OUT (no real auth): reset() wipes the persisted account → defaults, then
+  navigate('/'). Lives in Sidebar (approved/pending) and RejectedState (the
+  only escape hatch when the shell is gone).
+
+SHARED FRAME — components/layout/OnboardingShell.jsx:
+  Cardless centered column (logo pinned top → optional icon → title → subtitle →
+  children centered in the remaining space). Reference: Linear/ChatGPT/Cursor
+  login. Header is center-aligned; children slot is left untouched so form labels
+  stay left-aligned. Props: icon, title, subtitle, backdrop (Signup's globe),
+  maxWidth (max-w-sm default; verify uses max-w-2xl for the iframe), align
+  ('center' default / 'top' for the tall Sumsub iframe). Spacing is on the Pax
+  scale (title→content gap mt-10/40px). Verified responsive at mobile (375) +
+  tablet (768) — all onboarding surfaces (signup + login) share this frame so
+  the layout rhythm is identical across breakpoints.
+
+  GLOBE BACKDROP (Signup + Login): a STATIC PNG (public/signup-globe.png, 760×760),
+  NOT the landing page's live GlobeCanvas — deliberately avoids pulling three.js
+  + the topojson CDN fetch into the onboarding bundle. Desktop-only: gated on
+  !useIsMobile(1024) so it never renders below 1024px. Anchored bottom-center,
+  pushed mostly out of frame (translate-y) so only the top cap rises into view.
+
+MSW: POST /api/signup → validates {company,email}, returns fake applicantId +
+  sumsubLink. POST /api/login → validates {email}, returns fake magicLinkToken
+  (no "account exists" check — that's an enumeration leak). No status endpoint —
+  status is client-side in AccountContext.
 
 ═══════════════════════════════════════════════════════════
 DATA MODELS — KEY FACTS
@@ -181,8 +274,11 @@ src/
       Sidebar.jsx       ← Responsive: 280px mobile drawer, 56px tablet icon-rail, 224px desktop
       TopBar.jsx        ← Preserved but NOT mounted (unused)
       MobileTopBar.jsx  ← md:hidden top bar: hamburger + wordmark + search icon
-      AppShell.jsx      ← Layout: Sidebar + <main> + <GlobalPanel> as flex siblings
-                          Test mode amber banner renders at top of <main>
+      AppShell.jsx      ← Layout: Sidebar + <main> + <GlobalPanel> as flex siblings.
+                          Test mode amber + pending "under review" info banners at top
+                          of <main>. Gates on isRejected (early-returns RejectedState).
+      OnboardingShell.jsx ← Cardless centered frame for all pre-dashboard screens
+      DemoStatusSwitcher.jsx ← Prototype-only: flip approved/pending/rejected (fixed overlay)
       DetailPanel.jsx   ← Exports PanelSection + PanelRow compound components only
       GlobalPanel.jsx   ← Push panel: w-screen (mobile full-screen), 380px tablet, 420px desktop
     ui/
@@ -201,7 +297,13 @@ src/
     Overview.jsx        Transactions.jsx    Accounts.jsx      Recipients.jsx
     Customers.jsx       RequestLog.jsx      Webhooks.jsx      ApiKey.jsx
     AuditLog.jsx        Team.jsx
+    signup/   ← self-service onboarding + login (standalone, no AppShell)
+      Signup.jsx  CheckEmail.jsx  VerifyIdentity.jsx  RejectedState.jsx
+      WelcomeEmailPreview.jsx (email artifact modal, opened from CheckEmail)
+      Login.jsx  LoginCheckEmail.jsx (returning-user magic-link sign-in)
   context/
+    AccountContext.jsx  ← { status, isReadOnly, isRejected, register, setStatus, reset } —
+                          useAccount(); localStorage-backed onboarding status
     ModeContext.jsx     ← { mode, setMode, isTestMode } — useMode()
     SearchContext.jsx   ← { isOpen, openSearch, closeSearch, recentItems, addRecentItem }
     SidebarContext.jsx  ← { isMobileOpen, isTabletExpanded, open/close/toggleTabletExpanded }
@@ -222,9 +324,11 @@ src/
     components/  ← Navbar, Hero, HowItWorks, FloatingCodeBlock, DeveloperSection,
                    StatsSection, Footer, GlobeCanvas (lazy)
     hooks/ constants/ data/  ← landing-only scroll/copy helpers
-  App.jsx       ← createBrowserRouter; / = LandingPage, /dashboard/* = AppShell tree
-                  provider order: PanelProvider > ModeProvider
-                  > SearchProvider > RouterProvider
+  App.jsx       ← createBrowserRouter; / = LandingPage, /signup* + /login* +
+                  /onboarding/verify = standalone onboarding, /dashboard/* = AppShell tree
+                  provider order: AccountProvider > SidebarProvider > PanelProvider
+                  > ModeProvider > SearchProvider > RouterProvider
+                  (AccountProvider outermost: status read by landing, signup, AppShell, hooks)
   main.jsx      ← MSW bootstrap → createRoot
 
 ROUTES:
@@ -240,8 +344,13 @@ ROUTES:
   /dashboard/settings/audit-log       AuditLog
   /dashboard/settings/team            Team
   /dashboard/settings/webhooks        → redirect to /dashboard/developer/webhooks
+  /signup                             Signup (standalone onboarding — no AppShell)
+  /signup/check-email                 CheckEmail
+  /onboarding/verify                  VerifyIdentity (Sumsub handoff)
+  /login                              Login (returning-user magic-link sign-in)
+  /login/check-email                  LoginCheckEmail
   (Dashboard pages live under /dashboard; all internal nav/deep-links are prefixed.
-   Landing "Sign in" CTAs link to /dashboard via plain <a href>.)
+   "Sign in" CTAs (landing Navbar + Hero, Signup footer) link to /login.)
 
 MSW API SURFACE:
   GET  /api/transactions        ?page&limit&status&type&accountId&mode
@@ -265,10 +374,13 @@ MSW API SURFACE:
   GET  /api/audit-log           ?page&limit&action&actor&dateRange
   GET  /api/team
   GET  /api/api-key
+  POST /api/signup              → validates {company,email}, returns applicantId + sumsubLink
+  POST /api/login               → validates {email}, returns magicLinkToken (200)
 
 Pagination shape: { data: [...], meta: { total, page, limit, totalPages } }
 Mode-separated: transactions, accounts, customers only.
 Not mode-separated: webhooks, recipients, transfers, audit-log, team, request-log, api-key.
+Pending (read-only) accounts: list hooks short-circuit to empty before any fetch.
 
 ═══════════════════════════════════════════════════════════
 HOW TEST/LIVE MODE WORKS
@@ -551,11 +663,28 @@ KNOWN LIMITATIONS
 - Audit Log entry count grows as transfers are added (entries computed from auditLog.length)
 - TRANSACTION_TOTAL hardcoded at 847 (simulates large dataset)
 - Bundle ~713KB unminified — in prod: code-split with React.lazy()
+- Onboarding: DemoStatusSwitcher + "Preview welcome email" CTA are demo-only (wouldn't ship)
+- No real verdict — VerifyIdentity always lands on 'pending' (no Sumsub webhook backend)
+- Login is routing-only: the magic link is simulated by "Continue to dashboard" (no real
+  mail/auth/token verification); whatever status is in localStorage drives the dashboard
+- CheckEmail "resend" (signup + login) is a UI-only stub (no real mail sends)
+- Account status persists in localStorage (globalstack.account) — clear it or use Demo switcher to reset
 
 ═══════════════════════════════════════════════════════════
 WHAT TO TACKLE NEXT
 ═══════════════════════════════════════════════════════════
 
+Onboarding roadmap (from team update, Jun 2026 — see project memory):
+- Updated welcome email design
+- Rework pending state: replace the read-only empty dashboard with a dedicated
+  "under review" status page — set expectations (what's happening, rough timeline)
+  + give them things to do while they wait (explore docs, grab sandbox API keys,
+  invite teammates). Dashboard only appears once approved. (Rationale: a dashboard
+  full of zeros earns nothing; there's no test mode at launch to fill it.)
+- Open question: rejected state — resubmit/appeal path, or terminal? (currently
+  terminal: "Contact support" mailto only)
+
+Other:
 - Consider: "dismissed alerts" pattern — localStorage keyed by item ID+status so
   acknowledged issues don't re-surface on every page load
 

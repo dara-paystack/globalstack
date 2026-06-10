@@ -4,14 +4,16 @@
 
 ```
 src/
-  App.jsx               Router root: / = LandingPage, /dashboard/* = AppShell tree
-                        (PanelProvider + ModeProvider + SearchProvider + SidebarProvider)
+  App.jsx               Router root: / = LandingPage, /signup* + /login* + /onboarding/verify =
+                        standalone onboarding, /dashboard/* = AppShell tree
+                        (AccountProvider OUTERMOST, then PanelProvider + ModeProvider
+                        + SearchProvider + SidebarProvider)
   main.jsx              MSW bootstrap → createRoot
   index.css             Tailwind v4 + Pax theme import (+ landing cursor-blink keyframe)
 
   landing/              Marketing site at / — self-contained, isolated from the dashboard.
                         React + framer-motion + three.js; plain <a>/inline styles + standard
-                        Tailwind utilities (NO Pax, NO custom config). "Sign in" → /dashboard.
+                        Tailwind utilities (NO Pax, NO custom config). "Sign in" → /login.
     LandingPage.jsx     Page root (was the landing repo's App.jsx)
     components/         Navbar, Hero, HowItWorks, FloatingCodeBlock, DeveloperSection,
                         StatsSection, Footer, GlobeCanvas (lazy-loaded three.js globe)
@@ -19,7 +21,12 @@ src/
 
   components/
     layout/
-      AppShell.jsx      Layout route: Sidebar + TopBar + flex row (main + GlobalPanel)
+      AppShell.jsx      Layout route: Sidebar + TopBar + flex row (main + GlobalPanel).
+                        Gates on account status: isRejected early-returns RejectedState
+                        (no shell); isReadOnly (pending) shows the "under review" banner.
+      OnboardingShell.jsx  Cardless centered frame for all pre-dashboard screens (logo
+                        pinned top, content centered). Props: icon/title/subtitle/backdrop/
+                        maxWidth/align. Verified responsive at mobile (375) + tablet (768).
       Sidebar.jsx       Fixed left nav with NavLink active states
       TopBar.jsx        Test/Live toggle, amber banner
       GlobalPanel.jsx   Page-level push panel (reads PanelContext, fetches by ID)
@@ -47,12 +54,23 @@ src/
     AuditLog.jsx        Compliance record of dashboard actions
     Team.jsx            Team members + permissions reference
     RequestLog.jsx      API request log — developer debugging surface
+    signup/             Self-service onboarding + login (standalone, no AppShell):
+      Signup.jsx        Collects company name + work email → POST /api/signup → check-email
+      CheckEmail.jsx    "Check your email" + Continue verification / Preview welcome email
+      WelcomeEmailPreview.jsx  Modal preview of the designed welcome email (demo artifact)
+      VerifyIdentity.jsx  Sumsub iframe handoff + "open in new tab" fallback (align='top')
+      RejectedState.jsx   Full-page "couldn't verify" state (rendered by AppShell gate)
+      Login.jsx         Returning users: work email → POST /api/login → check-email (routing-only)
+      LoginCheckEmail.jsx  "Check your email"; "Continue to dashboard" simulates the magic link
 
   components/ui/
     SendFundsModal.jsx  4-step transfer initiation modal (see below)
 
   context/
     ModeContext.jsx     Global Test/Live state; useMode() hook
+    AccountContext.jsx  Onboarding/account status; useAccount() → { status, isReadOnly,
+                        isRejected, register, setStatus, reset }. localStorage-backed
+                        (key globalstack.account); provider is outermost in App.jsx
     SearchContext.jsx   Global search open/close + recent items (session-only); useSearch() hook
     PanelContext.jsx    Global panel state; usePanelContext() → { panelState, openPanel, closePanel }
 
@@ -81,12 +99,19 @@ src/
 Uses `createBrowserRouter` (HTML5 History API). The marketing LandingPage owns `/`
 as a standalone route (no AppShell). The dashboard lives under `/dashboard/*`, where
 AppShell is a pathless layout route that renders the shell and an `<Outlet />` for
-the active child. The landing's "Sign in" CTAs link to `/dashboard` via plain `<a href>`
+the active child. The landing's "Sign in" CTAs link to `/login` via plain `<a href>`
 (full page load — keeps the landing free of any react-router dependency).
 
 ```
 MARKETING
 /                                 → LandingPage (no AppShell)
+
+ONBOARDING (standalone, no AppShell — gated by AccountContext)
+/signup                           → Signup
+/signup/check-email               → CheckEmail
+/onboarding/verify                → VerifyIdentity (Sumsub handoff)
+/login                            → Login (returning-user magic-link sign-in)
+/login/check-email                → LoginCheckEmail
 
 DASHBOARD (AppShell tree)
 /dashboard                        → Overview
@@ -120,7 +145,8 @@ REDIRECTS (backwards-compatibility)
 
 ## State Management
 
-- **Global:** ModeContext (Test/Live mode), PanelContext (open panel + selected ID)
+- **Global:** ModeContext (Test/Live mode), PanelContext (open panel + selected ID),
+  AccountContext (onboarding status — approved/pending/rejected, localStorage-backed)
 - **Page-level:** useState for filters, pagination only (selectedId moved to PanelContext)
 - **Server state:** Custom hooks (no React Query — overkill for a prototype)
 

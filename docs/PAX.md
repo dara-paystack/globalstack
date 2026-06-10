@@ -57,6 +57,22 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 </Select>
 ```
 
+### Button
+Used across onboarding and action surfaces. Variants: `default` (filled),
+`outline`, `text` (inline link-style). Colors: `primary`, `secondary`. Sizes
+`sm`/`xs`. `asChild` renders the Pax styling onto a child element — used to make a
+real `<a>` look like a text button (e.g. Signup "Sign in", CheckEmail "View it
+here", Verify "Open in a new tab").
+
+```jsx
+import { Button } from '@paystack/pax'
+<Button asChild variant="text" color="primary" size="xs"><a href="/...">Link</a></Button>
+```
+
+### TextInput
+Form inputs on the Signup screen. Pair with own validation (`noValidate` form) +
+`aria-invalid`/`aria-describedby` for error states.
+
 ## Design Tokens (Tailwind Classes)
 
 All colors come from `@paystack/pax/dist/theme.css` and are available as
@@ -76,6 +92,8 @@ Tailwind utility classes:
 
 These don't exist in Pax but are styled exclusively with Pax tokens:
 
+- `OnboardingShell` — cardless centered frame for all pre-dashboard screens (logo
+  pinned top, content centered). Props: icon/title/subtitle/backdrop/maxWidth/align
 - `DetailPanel` — slide-in panel with width animation
 - `Timeline` — vertical stepper with cerulean dots
 - `Badge` — semantic color mapping for statuses/types

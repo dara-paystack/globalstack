@@ -412,6 +412,8 @@ All handlers are in `src/mocks/handlers.js`. Every request gets 150–300ms of s
 | `GET /api/webhooks/:id/deliveries` | Paginated delivery log, newest-first. Params: `?page=1&limit=15` |
 | `POST /api/webhooks` | Returns 201 (no logic) |
 | `DELETE /api/webhooks/:id` | Returns 204 |
+| `POST /api/signup` | Validates `{company,email}`; returns fake `applicantId` + `sumsubLink`. No status endpoint — account status is client-side in AccountContext (localStorage). |
+| `POST /api/login` | Validates `{email}`; returns fake `magicLinkToken` (200). No "account exists" check (enumeration leak). Login is routing-only — does not touch AccountContext. |
 
 ### GET /api/accounts — query params
 
@@ -436,6 +438,18 @@ This ensures page 2 is always a continuation of page 1's sort order, not indepen
 | `useAccounts({ owner? })` | Fetches all accounts (or filtered by owner) without pagination. Used by Overview + Accounts banner. Old callers: `useAccounts()` with no args still works. |
 | `useCustomerAccounts({ page, limit, search, type, sort })` | Paginated customer accounts for the Accounts page flat table. Returns `{ data, meta, loading, error, refetch }`. |
 | `useAccount(id)` | Single account by ID. Used by GlobalPanel. |
+
+**Account status (pending) short-circuit:** all six list hooks (useTransactions,
+useAccounts, useCustomers, useRecipients, useRequestLog, useTransfers) check
+`isReadOnly` from AccountContext's `useAccount()`. When status is `pending` they
+skip the API round-trip and return empty, so dashboard pages render their existing
+empty states. Account status lives in `localStorage` (key `globalstack.account`),
+not the MSW layer.
+
+> **Name collision:** the context hook `useAccount()` clashes with the single-account
+> detail hook `useAccount(id)` in `useAccounts.js`. That module imports the context
+> one aliased — `import { useAccount as useAccountStatus }`. Other hooks import
+> `useAccount` from the context directly (no local collision).
 
 ## Adding New Data
 
