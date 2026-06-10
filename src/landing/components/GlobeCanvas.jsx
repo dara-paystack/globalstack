@@ -1512,7 +1512,7 @@ const GlobeCanvas = memo(function GlobeCanvas({scrollProgressRef, globeScrollOve
 
   return (
     <div
-      className="fixed top-0 right-0 w-[50vw] h-screen mr-16"
+      className="fixed top-0 right-0 w-[50vw] h-screen"
       style={{zIndex:0,pointerEvents:'none'}}
       aria-hidden="true"
     >

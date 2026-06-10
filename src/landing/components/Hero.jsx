@@ -160,36 +160,44 @@ export default function Hero() {
         transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.7, delay: 0.24, ease: [0.16, 1, 0.3, 1] }}
         className="flex items-center gap-5 mt-8"
       >
-        {/* Primary button — Sign up (the new onboarding CTA, leads the row) */}
-        <a
-          href="/signup"
-          className="inline-flex items-center font-sans font-medium text-sm text-white hover:opacity-80 transition-opacity"
-          style={{
-            background: '#0E141B',
-            padding: '10px 12px',
-            borderRadius: 12,
-            letterSpacing: '-0.01em',
-          }}
-        >
-          Sign up
-        </a>
+        {/* Sign up + Sign in are paired tightly (gap-3); the docs text link sits
+            further out (parent gap-5) since it's a different class of action. */}
+        <div className="flex items-center gap-3">
+          {/* Primary button — Sign up (the new onboarding CTA, leads the row).
+              1px transparent border matches the outline button's box model so
+              both render the same height without a padding fudge. */}
+          <a
+            href="/signup"
+            className="inline-flex items-center font-sans font-medium text-sm text-white hover:opacity-80 transition-opacity"
+            style={{
+              background: '#0E141B',
+              border: '1px solid transparent',
+              padding: '10px 20px',
+              borderRadius: 12,
+              letterSpacing: '-0.01em',
+            }}
+          >
+            Sign up
+          </a>
 
-        {/* Sign in — outline/secondary. padding is 9px (vs Sign up's 10px) to
-            offset the 1px border, so both buttons render the same height. */}
-        <a
-          href="/dashboard"
-          className="inline-flex items-center font-sans font-medium text-sm hover:opacity-80 transition-opacity"
-          style={{
-            color: '#0E141B',
-            background: 'transparent',
-            border: '1px solid #0E141B',
-            padding: '9px 12px',
-            borderRadius: 12,
-            letterSpacing: '-0.01em',
-          }}
-        >
-          Sign in
-        </a>
+          {/* Sign in — outline/secondary. Mirrors the marketing site's outline
+              button (DeveloperSection "Read the docs"): same padding, radius and
+              fill-on-hover invert. Border is a lighter (0.35) tint of the text
+              color — same border-lighter-than-text ratio as the reference,
+              flipped to dark for the light background. */}
+          <a
+            href="/login"
+            className="inline-flex items-center font-sans font-medium text-sm text-[#0E141B] hover:bg-[#0E141B] hover:text-white transition-colors"
+            style={{
+              border: '1px solid rgba(14, 20, 27, 0.35)',
+              padding: '10px 20px',
+              borderRadius: 12,
+              letterSpacing: '-0.01em',
+            }}
+          >
+            Sign in
+          </a>
+        </div>
 
         {/* Secondary text link */}
         {/* TODO: Update href to live docs URL before launch */}

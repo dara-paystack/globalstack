@@ -53,6 +53,14 @@ export default function Navbar({ scrollYProgress }) {
     [0, BG_BLUE_START, BG_BLUE_MID, BG_DARK_START, BG_DARK_MID, 1],
     ['#F2F1EE', '#F2F1EE', '#0C68EB', '#0C68EB', '#0E141B', '#0E141B']
   )
+  // Outline-button border: a lighter (0.35) tint of btnBg, so the border reads
+  // softer than the text — same treatment as the Hero + DeveloperSection outline
+  // buttons. Separate MotionValue (not the `border` shorthand) so it animates.
+  const btnBorder = useTransform(
+    scrollYProgress,
+    [0, BG_BLUE_START, BG_BLUE_MID, BG_DARK_START, BG_DARK_MID, 1],
+    ['rgba(14,20,27,0.35)', 'rgba(14,20,27,0.35)', 'rgba(255,255,255,0.35)', 'rgba(255,255,255,0.35)', 'rgba(255,255,255,0.35)', 'rgba(255,255,255,0.35)']
+  )
 
   useEffect(() => {
     const onScroll = () => {
@@ -92,20 +100,23 @@ export default function Navbar({ scrollYProgress }) {
 
         {/* Right: CTA */}
         <div className="flex items-center gap-2">
-          {/* Sign in — outline/secondary. Inverts the solid button's colors
-              (text + border use btnBg, transparent fill) so it reads as the
-              lower-emphasis action next to the solid Sign up primary. */}
+          {/* Sign in — outline/secondary. Transparent fill, text in btnBg, and a
+              lighter (0.35) btnBorder so the outline reads softer than the text —
+              the lower-emphasis action next to the solid Sign up primary. */}
           <motion.a
-            href="/dashboard"
+            href="/login"
             style={{
               backgroundColor: 'transparent',
               color: btnBg,
-              border: `1px solid ${btnBg}`,
-              padding: '10px 12px',
+              borderWidth: 1,
+              borderStyle: 'solid',
+              borderColor: btnBorder,
+              padding: '10px 20px',
               borderRadius: 12,
               fontFamily: 'Inter, sans-serif',
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: 500,
+              lineHeight: 1,
               letterSpacing: '-0.01em',
               display: 'inline-flex',
               alignItems: 'center',
@@ -125,11 +136,12 @@ export default function Navbar({ scrollYProgress }) {
               backgroundColor: btnBg,
               color: btnColor,
               border: '1px solid transparent',
-              padding: '10px 12px',
+              padding: '10px 20px',
               borderRadius: 12,
               fontFamily: 'Inter, sans-serif',
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: 500,
+              lineHeight: 1,
               letterSpacing: '-0.01em',
               display: 'inline-flex',
               alignItems: 'center',

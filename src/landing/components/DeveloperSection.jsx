@@ -114,7 +114,7 @@ export default function DeveloperSection() {
           className="inline-flex items-center gap-2 font-sans font-medium text-sm text-white hover:bg-white/100 hover:text-black transition-colors self-start"
           style={{
             border: '1px solid rgba(255,255,255,0.35)',
-            padding: '10px 12px',
+            padding: '10px 20px',
             borderRadius: 12,
             letterSpacing: '-0.01em',
           }}
