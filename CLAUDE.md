@@ -113,16 +113,23 @@ ACCOUNT STATE — context/AccountContext.jsx, useAccount():
 THREE DASHBOARD STATES (gated in AppShell.jsx):
   approved — full dashboard (existing experience).
   pending  — RESTRICTED SHELL. AppShell renders PendingHome.jsx (the "under
-             review" status home: light-blue hero card with a line illustration
-             [no icon] + 3 "while you wait" cards — docs/sandbox keys/team) in
+             review" status home: time-aware greeting matching Overview [uses the
+             captured company name] + a light-blue status card [desktop-only line
+             illustration] + 3 "while you wait" cards — docs/sandbox keys/team) in
              place of Overview at /dashboard. Only API Keys + Team
              are otherwise reachable; any other dashboard route redirects to
              /dashboard. Reachable allowlist lives in lib/pendingAccess.js (shared
              by AppShell + Sidebar). Sidebar shows ONLY reachable items (locked
              ones are hidden, not greyed; empty sections drop out) and hides the
-             Test/Live pill. ApiKey frames the key as Sandbox (info banner +
-             "Sandbox" chip; live keys "activate on approval") and shows an empty
-             state in place of the usage chart. "Under review" banner shows on
+             Test/Live pill. ApiKey frames the key as Sandbox via a pending-only
+             subtitle + "Sandbox" chip (live keys "activate on approval") and shows
+             an empty state in place of the usage chart; it does NOT repeat the
+             "under review" status in an in-page banner — that status is owned solely
+             by the global AppShell banner (avoids showing two banners). Team's actions (Invite member +
+             Role permissions) stay LIVE while pending via PageHeader's
+             actionsEnabledWhilePending opt-in — lining up teammates pre-approval
+             is encouraged (the "Invite your team" card points here); every other
+             page's create actions stay gated. "Under review" banner shows on
              reachable sub-pages, not on the status home. (Data
              hooks still short-circuit to empty on isReadOnly as defense-in-depth,
              but those pages are unreachable while pending.)
@@ -503,6 +510,11 @@ COMPONENT API:
     ]}
     primaryAction={{ label: '+ Add recipient', icon?, onClick }}  ← optional
     secondaryAction={{ label: 'Role permissions', icon?, onClick }} ← optional (Team only)
+    actionsEnabledWhilePending                    ← optional; default false. Pending
+                                                     (isReadOnly) accounts have all
+                                                     actions disabled w/ "Available once
+                                                     verified" tooltip UNLESS a page opts
+                                                     in. Team sets this (invite pre-approval).
   />
 
 STRUCTURE:

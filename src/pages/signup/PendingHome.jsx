@@ -62,22 +62,40 @@ function ActionCard({ icon: Icon, title, description, to, href, external, traili
   )
 }
 
+// Mirrors Overview's greeting so the pending shell opens with the same warm,
+// time-aware header as the live dashboard. Kept local (4 lines) rather than
+// shared — Overview owns its own copy and the thresholds are unlikely to drift.
+function getGreeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
 export default function PendingHome() {
   usePageTitle('Account under review')
   const { company, email } = useAccount()
 
   return (
     <div className="space-y-10">
+      {/* Personalized greeting — same header as the live dashboard (Overview), so
+          the pending shell feels like a continuation of the product, not a separate
+          holding screen. Uses the captured company name; falls back to the demo
+          merchant when none was captured (e.g. arriving via the demo switcher). */}
+      <h1 className="text-xl lg:text-2xl font-semibold text-content-primary leading-snug">
+        {getGreeting()}, {company || 'Acme Corp'}
+      </h1>
+
       {/* ── Status hero ─────────────────────────────────────────────────────────
           Light-blue (information) card. Flat status (no progress stepper): we don't
           get granular state back from Sumsub, so a stepper would be fiction — one
           clear message. Horizontal layout: text leads, a line illustration sits to
-          the right on desktop. */}
+          the right on desktop. Heading is an h2 — the greeting above is the page h1. */}
       <div className="rounded-xl border border-feedback-information-border bg-feedback-information-light p-6 md:p-8 flex flex-col md:flex-row md:items-center gap-6">
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl lg:text-2xl font-semibold text-content-primary leading-snug">
+          <h2 className="text-lg font-semibold text-content-primary leading-snug">
             Your account is under review
-          </h1>
+          </h2>
           <p className="mt-2 text-sm text-content-secondary max-w-xl leading-relaxed">
             We&apos;re verifying{' '}
             {company ? (
