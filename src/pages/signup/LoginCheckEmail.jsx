@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@paystack/pax'
 import { Mail } from 'lucide-react'
 import { useAccount } from '../../context/AccountContext'
 import { OnboardingShell } from '../../components/layout/OnboardingShell'
+import LoginEmailPreview from './LoginEmailPreview'
 
 // LoginCheckEmail — the post-login confirmation screen.
 //
@@ -24,6 +26,8 @@ export default function LoginCheckEmail() {
   const account = useAccount()
 
   const email = state?.email || account.email
+
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   return (
     <OnboardingShell
@@ -52,6 +56,16 @@ export default function LoginCheckEmail() {
         >
           Continue to dashboard
         </Button>
+
+        {/* Inspect the email we'd send (the designed artifact) */}
+        <Button
+          variant="outline"
+          color="secondary"
+          onClick={() => setPreviewOpen(true)}
+          className="w-full cursor-pointer"
+        >
+          Preview sign-in email
+        </Button>
       </div>
 
       {/* Resend — UI-only stub in this prototype (no real mail sends). */}
@@ -67,6 +81,8 @@ export default function LoginCheckEmail() {
           Try a different email
         </Button>
       </p>
+
+      <LoginEmailPreview open={previewOpen} onClose={() => setPreviewOpen(false)} />
     </OnboardingShell>
   )
 }
