@@ -41,7 +41,7 @@
 //   Both animate at 220ms ease-out so they move together.
 
 import { useEffect } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, Navigate, useLocation } from 'react-router-dom'
 import { Alert, AlertDescription, AlertWarningIcon, AlertInformationIcon, TooltipProvider } from '@paystack/pax'
 import { Sidebar } from './Sidebar'
 import { GlobalPanel } from './GlobalPanel'
@@ -53,6 +53,8 @@ import { useMode } from '../../context/ModeContext'
 import { useAccount } from '../../context/AccountContext'
 import { useSidebar } from '../../context/SidebarContext'
 import RejectedState from '../../pages/signup/RejectedState'
+import PendingHome from '../../pages/signup/PendingHome'
+import { PENDING_REACHABLE_PATHS } from '../../lib/pendingAccess'
 
 export function AppShell() {
   const { closePanel, panelState } = usePanelContext()
@@ -91,6 +93,20 @@ export function AppShell() {
         <DemoStatusSwitcher />
       </>
     )
+  }
+
+  // Restricted shell for pending merchants. The status home (PendingHome) stands
+  // in for the dashboard index; a short allowlist of useful pages (sandbox keys,
+  // team) stays reachable; any other dashboard route bounces back to the status
+  // home. Computing it here keeps the Outlet swap and the redirect in one place,
+  // rather than scattering guards across every page.
+  let mainContent = <Outlet />
+  if (isReadOnly) {
+    if (location.pathname === '/dashboard') {
+      mainContent = <PendingHome />
+    } else if (!PENDING_REACHABLE_PATHS.has(location.pathname)) {
+      mainContent = <Navigate to="/dashboard" replace />
+    }
   }
 
   return (
@@ -166,14 +182,15 @@ export function AppShell() {
                 </AlertDescription>
               </Alert>
             )}
-            {/* Account-under-review banner — shown while the merchant is pending
-                verification. The dashboard renders read-only (empty data, disabled
-                actions) so they can look around while we review their business. */}
-            {isReadOnly && (
+            {/* Account-under-review banner — a persistent reminder on the reachable
+                sub-pages (sandbox keys, team) while the merchant is pending. Skipped
+                on the status home itself (location '/dashboard'), where the page is
+                already the status and the banner would just be redundant. */}
+            {isReadOnly && location.pathname !== '/dashboard' && (
               <Alert severity="information" variant="filled" className="rounded-none border-x-0 border-t-0">
                 <AlertInformationIcon />
                 <AlertDescription>
-                  Your account is under review. You have read-only access until your business is verified — we&apos;ll email you when it&apos;s ready.
+                  Your account is under review. We&apos;ll email you as soon as you&apos;re verified.
                 </AlertDescription>
               </Alert>
             )}
@@ -183,7 +200,7 @@ export function AppShell() {
                 Desktop: p-16 (64px) — generous, matches original design */}
             <div className="p-4 md:p-6 lg:p-16">
               <div className="max-w-[1200px] mx-auto">
-                <Outlet />
+                {mainContent}
               </div>
             </div>
           </main>

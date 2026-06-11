@@ -35,6 +35,7 @@ import {
 import { useMode } from '../../context/ModeContext'
 import { useSidebar } from '../../context/SidebarContext'
 import { useAccount } from '../../context/AccountContext'
+import { PENDING_REACHABLE_PATHS } from '../../lib/pendingAccess'
 
 const NAV_MAIN = [
   { to: '/dashboard', label: 'Overview', end: true, icon: LayoutDashboard },
@@ -95,7 +96,7 @@ function NavItem({ to, label, end, icon: Icon }) {
 export function Sidebar() {
   const { setMode, isTestMode } = useMode()
   const { isMobileOpen, isTabletExpanded, closeMobileSidebar, toggleTabletExpanded } = useSidebar()
-  const { reset } = useAccount()
+  const { reset, isReadOnly } = useAccount()
   const navigate = useNavigate()
 
   function toggleMode() {
@@ -169,29 +170,33 @@ export function Sidebar() {
           GS
         </div>
 
-        {/* Mode toggle pill — hidden on tablet (no room at 56px), visible otherwise */}
-        <button
-          onClick={toggleMode}
-          aria-label={`Switch to ${isTestMode ? 'live' : 'test'} mode`}
-          aria-pressed={isTestMode}
-          className={[
-            'items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium border transition-colors cursor-pointer shrink-0',
-            isTestMode
-              ? 'border-feedback-warning-border bg-feedback-warning-light text-feedback-warning-dark'
-              : 'border-border-primary-light bg-surface-secondary text-content-secondary hover:bg-surface-tertiary',
-            // Literal strings required — Tailwind purges classes built via template literals
-            isTabletExpanded ? 'flex' : 'flex md:hidden lg:flex',
-          ].join(' ')}
-        >
-          <span
-            aria-hidden="true"
+        {/* Mode toggle pill — hidden on tablet (no room at 56px), visible otherwise.
+            Suppressed entirely while pending: a Test/Live toggle is meaningless with
+            no data behind it and an account that isn't live yet. */}
+        {!isReadOnly && (
+          <button
+            onClick={toggleMode}
+            aria-label={`Switch to ${isTestMode ? 'live' : 'test'} mode`}
+            aria-pressed={isTestMode}
             className={[
-              'w-1.5 h-1.5 rounded-full shrink-0',
-              isTestMode ? 'bg-feedback-warning-main' : 'bg-feedback-success-main',
+              'items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium border transition-colors cursor-pointer shrink-0',
+              isTestMode
+                ? 'border-feedback-warning-border bg-feedback-warning-light text-feedback-warning-dark'
+                : 'border-border-primary-light bg-surface-secondary text-content-secondary hover:bg-surface-tertiary',
+              // Literal strings required — Tailwind purges classes built via template literals
+              isTabletExpanded ? 'flex' : 'flex md:hidden lg:flex',
             ].join(' ')}
-          />
-          {isTestMode ? 'Test' : 'Live'}
-        </button>
+          >
+            <span
+              aria-hidden="true"
+              className={[
+                'w-1.5 h-1.5 rounded-full shrink-0',
+                isTestMode ? 'bg-feedback-warning-main' : 'bg-feedback-success-main',
+              ].join(' ')}
+            />
+            {isTestMode ? 'Test' : 'Live'}
+          </button>
+        )}
       </div>
 
       {/* ── Navigation ──────────────────────────────────────────────────────── */}
@@ -200,29 +205,39 @@ export function Sidebar() {
           { id: 'business', label: 'Business', items: NAV_MAIN },
           { id: 'developer', label: 'Developer', items: NAV_DEVELOPER },
           { id: 'admin', label: 'Admin', items: NAV_ADMIN },
-        ].map(({ id, label, items }, sectionIdx) => (
-          <div key={id} className={sectionIdx < 2 ? 'mb-4' : ''}>
-            {/* Section label — mobile + desktop + tablet-expanded */}
-            <div
-              id={`nav-group-${id}`}
-              className={`px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-content-tertiary ${showOnMobileAndDesktop()}`}
-            >
-              {label}
+        ].map(({ id, label, items }, sectionIdx) => {
+          // While pending, the nav shows only the pages a merchant can actually
+          // reach — no wall of disabled rows. A section with nothing reachable
+          // (e.g. Developer) drops out entirely, header and all. Approved
+          // accounts see every item.
+          const visibleItems = isReadOnly
+            ? items.filter((item) => PENDING_REACHABLE_PATHS.has(item.to))
+            : items
+          if (visibleItems.length === 0) return null
+          return (
+            <div key={id} className={sectionIdx < 2 ? 'mb-4' : ''}>
+              {/* Section label — mobile + desktop + tablet-expanded */}
+              <div
+                id={`nav-group-${id}`}
+                className={`px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-content-tertiary ${showOnMobileAndDesktop()}`}
+              >
+                {label}
+              </div>
+              {/* Visual divider — tablet icon-only only, replaces section label */}
+              <div
+                className={`mx-2 mb-1.5 h-px bg-border-primary-light ${showOnTabletOnly('block')}`}
+                aria-hidden="true"
+              />
+              <ul aria-labelledby={`nav-group-${id}`} className="space-y-0.5">
+                {visibleItems.map((item) => (
+                  <li key={item.to}>
+                    <NavItem {...item} />
+                  </li>
+                ))}
+              </ul>
             </div>
-            {/* Visual divider — tablet icon-only only, replaces section label */}
-            <div
-              className={`mx-2 mb-1.5 h-px bg-border-primary-light ${showOnTabletOnly('block')}`}
-              aria-hidden="true"
-            />
-            <ul aria-labelledby={`nav-group-${id}`} className="space-y-0.5">
-              {items.map((item) => (
-                <li key={item.to}>
-                  <NavItem {...item} />
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+          )
+        })}
       </nav>
 
       {/* ── Tablet expand/collapse button ───────────────────────────────────── */}

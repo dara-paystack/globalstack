@@ -25,8 +25,9 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { Skeleton, Alert, AlertTitle, AlertDescription, AlertInformationIcon } from '@paystack/pax'
+import { Skeleton, Alert, AlertTitle, AlertDescription, AlertInformationIcon, Chip } from '@paystack/pax'
 import { Badge } from '../components/ui/Badge'
+import { useAccount } from '../context/AccountContext'
 import { formatDate, formatDatetime } from '../lib/format'
 
 // The complete permission surface this key system supports.
@@ -85,6 +86,9 @@ function UsageTooltip({ active, payload, label }) {
 
 export default function ApiKey() {
   usePageTitle('API Keys')
+  // Pending merchants reach this page (it's one of the few unlocked surfaces) and
+  // see the key framed as sandbox — live keys activate once they're verified.
+  const { isReadOnly } = useAccount()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -168,6 +172,19 @@ export default function ApiKey() {
         </p>
       </div>
 
+      {/* Pending-account sandbox notice — only while under review. Live keys are
+          gated behind approval (same model as Stripe et al.), so we frame what's
+          shown here as sandbox and invite them to start building. */}
+      {isReadOnly && (
+        <Alert severity="information" variant="filled">
+          <AlertInformationIcon />
+          <AlertDescription>
+            Your account is under review. These sandbox keys let you start building
+            now — live keys activate once you&apos;re verified.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="col-span-2 space-y-4">
@@ -210,7 +227,20 @@ export default function ApiKey() {
                   <h2 className="text-xs font-medium uppercase tracking-wide text-content-tertiary">
                     Secret key
                   </h2>
-                  <Badge variant="status" value={data.status} />
+                  {/* Sandbox chip while pending; real status badge once approved.
+                      Chip is rendered directly (as Badge does internally) with the
+                      Tailwind-v4 CVA override so the information color sticks. */}
+                  {isReadOnly ? (
+                    <Chip
+                      variant="status"
+                      color="information"
+                      className="!bg-feedback-information-light !border-feedback-information-border"
+                    >
+                      Sandbox
+                    </Chip>
+                  ) : (
+                    <Badge variant="status" value={data.status} />
+                  )}
                 </div>
                 <span className="text-xs text-content-tertiary">
                   Created {formatDate(data.created)}
@@ -256,6 +286,16 @@ export default function ApiKey() {
                 </h2>
               </div>
 
+              {isReadOnly ? (
+                // Pending accounts haven't made any API calls yet — nothing to chart.
+                <div className="flex flex-col items-center justify-center px-5 py-12 text-center">
+                  <p className="text-sm text-content-tertiary">No usage yet</p>
+                  <p className="text-xs text-content-tertiary mt-1">
+                    Your request volume will appear here once you start making API calls.
+                  </p>
+                </div>
+              ) : (
+                <>
               {/* Three stat cells — divided horizontally, no card overhead per cell */}
               <div className="grid grid-cols-3 divide-x divide-border-primary-light">
                 <div className="px-3 md:px-5 py-4">
@@ -354,6 +394,8 @@ export default function ApiKey() {
                   </span>
                 </div>
               </div>
+                </>
+              )}
             </div>
           </div>
 

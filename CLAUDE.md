@@ -21,14 +21,15 @@ accessible from every page — passing it as a prop through 4 component layers
 would be messy and brittle" is useful. "This is a React pattern" is not.
 
 ═══════════════════════════════════════════════════════════
-CURRENT STATUS — Updated Jun 10, 2026
+CURRENT STATUS — Updated Jun 11, 2026
 ═══════════════════════════════════════════════════════════
 
 All pages are built and functional. Latest work (feat/signup-flow branch):
 self-service onboarding — Signup → Check email → Sumsub handoff, plus three
 account states (approved / pending / rejected), plus a passwordless magic-link
-login for returning users. See SELF-SERVICE ONBOARDING section below. Not yet
-merged to main.
+login for returning users. Pending is now a RESTRICTED SHELL (PendingHome status
+page + locked-down nav), not a read-only empty dashboard. See SELF-SERVICE
+ONBOARDING section below. Not yet merged to main.
 
 PAGES BUILT (all dashboard pages are under /dashboard — paths below omit the prefix):
   BUSINESS section:
@@ -111,11 +112,20 @@ ACCOUNT STATE — context/AccountContext.jsx, useAccount():
 
 THREE DASHBOARD STATES (gated in AppShell.jsx):
   approved — full dashboard (existing experience).
-  pending  — read-only: information banner at top of <main> ("under review"),
-             and every data hook short-circuits to empty when isReadOnly (no
-             API round-trip) so pages render their existing empty states.
-             All six list hooks honor isReadOnly (useTransactions, useAccounts,
-             useCustomers, useRecipients, useRequestLog, useTransfers).
+  pending  — RESTRICTED SHELL. AppShell renders PendingHome.jsx (the "under
+             review" status home: light-blue hero card with a line illustration
+             [no icon] + 3 "while you wait" cards — docs/sandbox keys/team) in
+             place of Overview at /dashboard. Only API Keys + Team
+             are otherwise reachable; any other dashboard route redirects to
+             /dashboard. Reachable allowlist lives in lib/pendingAccess.js (shared
+             by AppShell + Sidebar). Sidebar shows ONLY reachable items (locked
+             ones are hidden, not greyed; empty sections drop out) and hides the
+             Test/Live pill. ApiKey frames the key as Sandbox (info banner +
+             "Sandbox" chip; live keys "activate on approval") and shows an empty
+             state in place of the usage chart. "Under review" banner shows on
+             reachable sub-pages, not on the status home. (Data
+             hooks still short-circuit to empty on isReadOnly as defense-in-depth,
+             but those pages are unreachable while pending.)
   rejected — AppShell early-returns the full-page RejectedState.jsx (no
              sidebar/nav at all). One action: "Contact support" (mailto) +
              "Log out".
@@ -275,8 +285,11 @@ src/
       TopBar.jsx        ← Preserved but NOT mounted (unused)
       MobileTopBar.jsx  ← md:hidden top bar: hamburger + wordmark + search icon
       AppShell.jsx      ← Layout: Sidebar + <main> + <GlobalPanel> as flex siblings.
-                          Test mode amber + pending "under review" info banners at top
-                          of <main>. Gates on isRejected (early-returns RejectedState).
+                          Test mode amber banner at top of <main>. Gates on status:
+                          isRejected early-returns RejectedState; pending renders
+                          PendingHome at /dashboard + redirects non-reachable routes
+                          (allowlist in lib/pendingAccess.js) + "under review" banner
+                          on reachable sub-pages.
       OnboardingShell.jsx ← Cardless centered frame for all pre-dashboard screens
       DemoStatusSwitcher.jsx ← Prototype-only: flip approved/pending/rejected (fixed overlay)
       DetailPanel.jsx   ← Exports PanelSection + PanelRow compound components only
@@ -301,6 +314,7 @@ src/
       Signup.jsx  CheckEmail.jsx  VerifyIdentity.jsx  RejectedState.jsx
       WelcomeEmailPreview.jsx (email artifact modal, opened from CheckEmail)
       Login.jsx  LoginCheckEmail.jsx (returning-user magic-link sign-in)
+      PendingHome.jsx ← "under review" status home; renders INSIDE AppShell (not standalone)
   context/
     AccountContext.jsx  ← { status, isReadOnly, isRejected, register, setStatus, reset } —
                           useAccount(); localStorage-backed onboarding status
@@ -319,6 +333,7 @@ src/
   lib/
     format.js   ← formatUSDC, formatAmount, formatDatetime, formatDate, formatRelative
     alerts.js   ← buildAlertItems() — Needs Attention data derivation
+    pendingAccess.js ← PENDING_REACHABLE_PATHS + DOCS_URL (pending restricted-shell allowlist)
   landing/      ← marketing site at / (self-contained; framer-motion + three.js)
     LandingPage.jsx  ← page root (was the landing repo's App.jsx)
     components/  ← Navbar, Hero, HowItWorks, FloatingCodeBlock, DeveloperSection,
@@ -682,6 +697,7 @@ KNOWN LIMITATIONS
   mail/auth/token verification); whatever status is in localStorage drives the dashboard
 - CheckEmail "resend" (signup + login) is a UI-only stub (no real mail sends)
 - Account status persists in localStorage (globalstack.account) — clear it or use Demo switcher to reset
+- Pending shell: Docs link (https://docs.globalstack.com) is a stub URL; sandbox API keys are display-only (no callable sandbox API)
 
 ═══════════════════════════════════════════════════════════
 WHAT TO TACKLE NEXT
@@ -689,13 +705,10 @@ WHAT TO TACKLE NEXT
 
 Onboarding roadmap (from team update, Jun 2026 — see project memory):
 - Updated welcome email design
-- Rework pending state: replace the read-only empty dashboard with a dedicated
-  "under review" status page — set expectations (what's happening, rough timeline)
-  + give them things to do while they wait (explore docs, grab sandbox API keys,
-  invite teammates). Dashboard only appears once approved. (Rationale: a dashboard
-  full of zeros earns nothing; there's no test mode at launch to fill it.)
-- Open question: rejected state — resubmit/appeal path, or terminal? (currently
-  terminal: "Contact support" mailto only)
+- For team (raised with the pending rework): confirm review-SLA copy (we shipped
+  "3–5 business days"); decide whether pending sandbox keys become functional vs.
+  display-only; confirm the reachable trio (Docs / API key / Team).
+  (Rejected state: DECIDED terminal — Lex confirmed ~Jun 11; contact-support only.)
 
 Other:
 - Consider: "dismissed alerts" pattern — localStorage keyed by item ID+status so
