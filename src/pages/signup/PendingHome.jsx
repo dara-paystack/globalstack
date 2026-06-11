@@ -32,7 +32,7 @@ function ActionCard({ icon: Icon, title, description, to, href, external, traili
 
   const inner = (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <span className="w-9 h-9 rounded-lg bg-surface-secondary group-hover:bg-surface-tertiary flex items-center justify-center shrink-0 transition-colors">
           <Icon size={17} strokeWidth={1.75} className="text-content-secondary" aria-hidden="true" />
         </span>
