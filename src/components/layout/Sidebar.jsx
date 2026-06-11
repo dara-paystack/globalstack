@@ -254,13 +254,12 @@ export function Sidebar() {
       </button>
 
       {/* ── Merchant identity + account menu ────────────────────────────────── */}
-      {/* The whole identity row is the dropdown trigger. Clicking it opens an
-          upward-anchored menu (side="top") whose only item is Log out.
-          NOTE: Pax's DropdownMenuTrigger renders its OWN <button> and spreads
-          props onto it — it does NOT support asChild. So we style the trigger
-          directly (className + children land on Pax's button). Wrapping our own
-          <button> in asChild would nest a button-in-button and the visible row
-          would size to content, not full width. */}
+      {/* The whole identity row is the dropdown trigger; clicking anywhere on it
+          opens the account menu to the side (side="right"), whose only item is Log out.
+          NOTE: Pax's DropdownMenuTrigger renders its OWN <button> and spreads props
+          onto it — it does NOT support asChild. So we style the trigger directly
+          (className + children land on Pax's button). Wrapping our own <button> in
+          asChild would nest a button-in-button and the row would size to content. */}
       <div className="border-t border-border-primary-light shrink-0">
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -290,21 +289,25 @@ export function Sidebar() {
               className={`shrink-0 text-content-tertiary ${showOnMobileAndDesktop()}`}
             />
           </DropdownMenuTrigger>
-          {/* Compact, content-width menu (floored at 180px) that floats above the
-              identity row like a normal dropdown — centered on the trigger rather than
-              pinned to the sidebar's edge. A single "Log out" item stretched across the
-              full sidebar read as an oversized, half-empty bar glued to the row. Radix
-              collision handling keeps it on-screen when it flies out from the narrow
-              56px collapsed tablet rail; sideOffset lifts it off the identity row so it
-              reads as floating rather than attached. */}
+          {/* Account menu opening to the side (side="right"), floating beside the
+              identity row. Single Log out CTA. Pax's content supplies the soft card
+              (rounded-lg + shadow-elevate + hairline border); the p-1.5 gutter insets
+              the row so its hover reads as a soft, rounded full-width highlight.
+              align="center" centers the card on the row; sideOffset is the gap off the
+              sidebar's right edge; collisionPadding keeps it off the viewport edges and
+              lets Radix flip it leftward if the right has no room (e.g. mobile drawer). */}
           <DropdownMenuContent
-            side="top"
+            side="right"
             align="center"
             sideOffset={8}
-            className="min-w-[180px]"
+            collisionPadding={8}
+            className="min-w-[208px] p-1.5"
           >
-            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
-              <LogOut width={15} height={15} strokeWidth={1.75} />
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="cursor-pointer gap-2.5 rounded-md px-3 py-3 text-content-primary"
+            >
+              <LogOut width={16} height={16} strokeWidth={1.75} />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
