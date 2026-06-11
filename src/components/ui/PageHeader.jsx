@@ -76,12 +76,17 @@ export function PageHeader({
   filters = [],
   primaryAction,
   secondaryAction,
+  actionsEnabledWhilePending = false,
 }) {
   // Read-only (pending) accounts can browse but not create — every page's
   // primary/secondary action is gated here in one place rather than per page.
+  // Exception: a page opts in via actionsEnabledWhilePending when its action is
+  // explicitly allowed pre-approval. Team does this — inviting teammates is
+  // something we actively encourage while a merchant waits for verification
+  // (the pending home's "Invite your team" card points straight here).
   const { isReadOnly } = useAccount()
-  const actionsDisabled = isReadOnly
-  const disabledTitle = isReadOnly ? 'Available once your account is verified' : undefined
+  const actionsDisabled = isReadOnly && !actionsEnabledWhilePending
+  const disabledTitle = actionsDisabled ? 'Available once your account is verified' : undefined
   const [panelOpen, setPanelOpen] = useState(false)
   // pendingValues holds the in-panel selections before Apply is clicked.
   // Keyed by filter id so the panel can be generic across all pages.

@@ -523,6 +523,10 @@ export default function Team() {
         <PageHeader
           title="Team"
           subtitle="People with access to this dashboard."
+          // Inviting teammates is allowed pre-approval — a pending merchant can
+          // line up their team while waiting for verification (the pending home
+          // points them here), so these actions stay live in the restricted shell.
+          actionsEnabledWhilePending
           secondaryAction={{
             label: 'Role permissions',
             icon: <Shield size={14} strokeWidth={2} />,
