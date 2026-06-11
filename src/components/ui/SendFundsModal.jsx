@@ -379,7 +379,7 @@ export function SendFundsModal({ open, onClose, preselectedAccountId }) {
                 <button
                   onClick={() => setStep(step + 1)}
                   disabled={!canAdvance(step, formData)}
-                  className="px-4 py-2 text-sm font-medium rounded-lg bg-action-primary-main text-content-inverse hover:bg-action-primary-dark disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                  className="px-4 py-2 text-sm font-medium rounded-lg bg-action-primary-main text-action-primary-contrast-text hover:bg-action-primary-dark disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
                 >
                   Continue
                 </button>
@@ -387,7 +387,7 @@ export function SendFundsModal({ open, onClose, preselectedAccountId }) {
                 <button
                   onClick={handleConfirm}
                   disabled={isSubmitting || !formData.amount}
-                  className="px-4 py-2 text-sm font-medium rounded-lg bg-action-primary-main text-content-inverse hover:bg-action-primary-dark disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                  className="px-4 py-2 text-sm font-medium rounded-lg bg-action-primary-main text-action-primary-contrast-text hover:bg-action-primary-dark disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
                 >
                   {isSubmitting ? 'Sending…' : 'Confirm transfer'}
                 </button>
@@ -840,7 +840,7 @@ function SuccessView({ transfer, onClose, navigate }) {
             onClose()
             navigate('/dashboard/transactions')
           }}
-          className="px-4 py-2 text-sm font-medium rounded-lg bg-action-primary-main text-content-inverse hover:bg-action-primary-dark cursor-pointer transition-colors"
+          className="px-4 py-2 text-sm font-medium rounded-lg bg-action-primary-main text-action-primary-contrast-text hover:bg-action-primary-dark cursor-pointer transition-colors"
         >
           View in transactions →
         </button>

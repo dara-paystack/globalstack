@@ -281,64 +281,6 @@ body {
   --viz-div-info-500:     var(--stack-500);
 }
 
-/* ─────────────────────────────────────────────────────────────
-   SHADCN / TAILWIND BRIDGE  (HSL channels — consumed by tailwind.config.ts)
-───────────────────────────────────────────────────────────── */
-@layer base {
-  :root {
-    /* backgrounds */
-    --background:           220 14% 97%;   /* surface/secondary  = midnight/200  */
-    --foreground:           212 32%  8%;   /* content/primary    = midnight/1100 */
-
-    --card:                   0  0% 100%;  /* surface/primary    = midnight/100  */
-    --card-foreground:      212 32%  8%;
-
-    --popover:                0  0% 100%;
-    --popover-foreground:   212 32%  8%;
-
-    /* brand */
-    --primary:              142 79% 29%;   /* action/primary/main = forest-green/700 */
-    --primary-foreground:     0  0% 100%;
-
-    --secondary:            220 14% 97%;   /* surface/secondary  = midnight/200  */
-    --secondary-foreground: 212 32%  8%;
-
-    --muted:                220 15% 94%;   /* surface/tertiary   = midnight/300  */
-    --muted-foreground:     212  6% 42%;   /* content/tertiary   = midnight/700  */
-
-    --accent:               137 57% 89%;   /* action/primary/light = forest-green/200 */
-    --accent-foreground:    142 79% 20%;   /* action/primary/dark  = forest-green/800 */
-
-    /* status */
-    --destructive:            0 73% 47%;   /* feedback/danger/main  = fire-red/600    */
-    --destructive-foreground: 0  0% 100%;
-
-    --warning:               44 100% 57%;  /* feedback/warning/main = golden-yellow/600 */
-    --warning-foreground:   212 32%  8%;
-
-    --success:              142 79% 39%;   /* feedback/success/main = forest-green/600 */
-    --success-foreground:     0  0% 100%;
-
-    /* chrome */
-    --border:               220 15% 94%;   /* border/primary/light = midnight/300 */
-    --input:                220 10% 86%;   /* border/primary/main  = midnight/400 */
-    --ring:                 210 100% 56%;  /* --color-focus-ring = #1E90FF        */
-
-    --radius: 0.5rem;
-
-    /* sidebar */
-    --sidebar-background:           220 14% 97%;
-    --sidebar-foreground:           210 10% 23%;  /* content/secondary = midnight/900 */
-    --sidebar-primary:              142 79% 29%;
-    --sidebar-primary-foreground:   142 79% 29%;
-    --sidebar-accent:               220 15% 94%;
-    --sidebar-accent-foreground:    212 32%  8%;
-    --sidebar-border:               220 15% 94%;
-    --sidebar-ring:                 142 79% 29%;
-    --sidebar-muted:                212  6% 42%;
-  }
-}
-
 @layer base {
   * {
     border-color: var(--color-border-primary-light);
@@ -397,5 +339,23 @@ body {
   }
   .link:hover {
     color: var(--color-action-link-dark);
+  }
+
+  /* Solid primary buttons render near-black (#0E141B) while the action-primary
+     token stays blue — so links, text buttons, badges, selection states, and
+     focus rings keep the blue accent. Scoped to Pax's solid-primary signature
+     (bg-action-primary-main + text-action-primary-contrast-text), which excludes
+     look-alike fills like count badges and toggle chips (they use
+     text-content-inverse). Inline primary CTAs opt in by using the same pair.
+     The two-class selector outranks Pax's single-class utilities, so it wins
+     without !important; hover lifts toward midnight-1000 since main is already
+     at the bottom of the ramp. */
+  .bg-action-primary-main.text-action-primary-contrast-text {
+    background-color: var(--midnight-1100);
+    border-color: var(--midnight-1100);
+  }
+  .bg-action-primary-main.text-action-primary-contrast-text:hover {
+    background-color: var(--midnight-1000);
+    border-color: var(--midnight-1000);
   }
 }

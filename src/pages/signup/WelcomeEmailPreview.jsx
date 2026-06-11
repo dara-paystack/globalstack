@@ -118,7 +118,7 @@ export default function WelcomeEmailPreview({ open, onClose, company, email }) {
               {/* Single, prominent CTA — points at the shared verification route */}
               <a
                 href="/onboarding/verify"
-                className="inline-flex items-center gap-2 mt-6 px-5 py-3 rounded-xl bg-action-primary-main text-content-inverse text-sm font-medium hover:opacity-90 transition-opacity"
+                className="inline-flex items-center gap-2 mt-6 px-5 py-3 rounded-xl bg-action-primary-main text-action-primary-contrast-text text-sm font-medium hover:opacity-90 transition-opacity"
               >
                 Verify your business
                 <ArrowRight width={16} height={16} strokeWidth={2} />

@@ -585,6 +585,19 @@ Badge colors:
   canceled/reversed → secondary (gray)
   invited → information | suspended → secondary
 
+PRIMARY BUTTON COLOR (near-black #0E141B):
+  Solid/filled primary buttons render near-black; everything else accent
+  (links, text buttons, badges, selection dots, focus rings, toggle chips)
+  stays blue. The action-primary token is UNCHANGED (still stack-600 blue) —
+  decoupling happens via a scoped CSS rule in src/index.css that targets Pax's
+  solid-primary class signature: .bg-action-primary-main.text-action-primary-contrast-text
+  (two-class selector outranks Pax's single-class utility, so no !important).
+  Hover lifts to midnight-1000 (main is already at the bottom of the ramp).
+  Look-alike fills (count badges, toggle chips, avatar squares, radio dots) use
+  text-content-inverse, NOT contrast-text — so they're excluded and stay blue.
+  Inline (non-Pax) primary CTAs opt in by using text-action-primary-contrast-text
+  instead of text-content-inverse (SendFundsModal, AddEndpointModal, WelcomeEmailPreview).
+
 ═══════════════════════════════════════════════════════════
 DO NOT
 ═══════════════════════════════════════════════════════════

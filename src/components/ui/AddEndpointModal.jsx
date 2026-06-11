@@ -132,7 +132,7 @@ export function AddEndpointModal({ onClose, onSuccess }) {
             <button
               type="submit"
               disabled={!canSubmit}
-              className="px-4 py-2 rounded-lg bg-action-primary-main text-content-inverse text-sm font-medium hover:bg-action-primary-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              className="px-4 py-2 rounded-lg bg-action-primary-main text-action-primary-contrast-text text-sm font-medium hover:bg-action-primary-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
               {submitting ? 'Adding…' : 'Add endpoint'}
             </button>
