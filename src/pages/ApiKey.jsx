@@ -166,24 +166,16 @@ export default function ApiKey() {
       {/* ── Page header ───────────────────────────────────────────────────── */}
       <div>
         <h1 className="text-2xl font-semibold text-content-primary leading-snug">API Keys</h1>
+        {/* Pending: the subtitle carries the sandbox framing (page-specific guidance).
+            The "under review" status itself is owned by the global AppShell banner, so
+            we deliberately don't repeat it here — the page shows one status banner, not
+            two. Approved accounts get the normal descriptive subtitle. */}
         <p className="mt-1 text-sm text-content-tertiary max-w-xl">
-          Your secret key for authenticating API requests. Keep this secure
-          and never expose it in client-side code.
+          {isReadOnly
+            ? "These sandbox keys let you start building now — your live keys activate once you're verified."
+            : 'Your secret key for authenticating API requests. Keep this secure and never expose it in client-side code.'}
         </p>
       </div>
-
-      {/* Pending-account sandbox notice — only while under review. Live keys are
-          gated behind approval (same model as Stripe et al.), so we frame what's
-          shown here as sandbox and invite them to start building. */}
-      {isReadOnly && (
-        <Alert severity="information" variant="filled">
-          <AlertInformationIcon />
-          <AlertDescription>
-            Your account is under review. These sandbox keys let you start building
-            now — live keys activate once you&apos;re verified.
-          </AlertDescription>
-        </Alert>
-      )}
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
