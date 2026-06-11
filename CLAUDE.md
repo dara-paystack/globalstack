@@ -94,8 +94,20 @@ FLOW (login — returning users, passwordless magic link):
                      mail/auth, so "Continue to dashboard" simulates clicking
                      the magic link → navigate('/dashboard'). AppShell then
                      renders whatever status is persisted (approved/pending/
-                     rejected). "Sign in" CTAs (Signup footer, landing Navbar +
-                     Hero) all point here.
+                     rejected). "Preview sign-in email" opens LoginEmailPreview.jsx
+                     (the magic-link email artifact). "Sign in" CTAs (Signup
+                     footer, landing Navbar + Hero) all point here.
+
+EMAIL PREVIEWS — components/../signup/EmailPreviewShell.jsx + the two emails:
+  EmailPreviewShell owns the shared frame (portal + focus trap, the bare grey
+  box, the white email card with the GlobalStack wordmark, and the footer);
+  each email passes only its content (heading → CTA → fine print) as children.
+  WelcomeEmailPreview (verify business, CTA → /onboarding/verify, has a "What
+  you'll need" checklist) + LoginEmailPreview (magic-link sign-in, CTA →
+  /dashboard, 15-min single-use link, leaner — no checklist). Linear-referenced
+  type/spacing: 24px heading, 14px body, content-width near-black CTA (no icon),
+  white card rounded-lg (12px) on a grey box. No real mail is sent — these
+  previews ARE the design artifacts.
 
 ACCOUNT STATE — context/AccountContext.jsx, useAccount():
   status: 'approved' | 'pending' | 'rejected'  (localStorage, key globalstack.account)
@@ -142,7 +154,8 @@ DEMO-ONLY (would not ship — flagged in code):
     rejected live without re-running signup. Mounted by AppShell in BOTH branches
     (normal + rejected early-return) so it stays reachable even in rejected,
     which removes the sidebar. In production status comes from Sumsub's verdict.
-  "Preview welcome email" CTA on CheckEmail — inspect the designed email artifact.
+  "Preview welcome email" / "Preview sign-in email" CTAs (CheckEmail +
+    LoginCheckEmail) — inspect the designed email artifacts.
 
 LOG OUT (no real auth): reset() wipes the persisted account → defaults, then
   navigate('/'). Lives in Sidebar (approved/pending) and RejectedState (the
@@ -319,7 +332,9 @@ src/
     AuditLog.jsx        Team.jsx
     signup/   ← self-service onboarding + login (standalone, no AppShell)
       Signup.jsx  CheckEmail.jsx  VerifyIdentity.jsx  RejectedState.jsx
-      WelcomeEmailPreview.jsx (email artifact modal, opened from CheckEmail)
+      EmailPreviewShell.jsx (shared email frame: grey box + white card + footer)
+      WelcomeEmailPreview.jsx (welcome/verify email, opened from CheckEmail)
+      LoginEmailPreview.jsx (magic-link sign-in email, opened from LoginCheckEmail)
       Login.jsx  LoginCheckEmail.jsx (returning-user magic-link sign-in)
       PendingHome.jsx ← "under review" status home; renders INSIDE AppShell (not standalone)
   context/
@@ -703,7 +718,7 @@ KNOWN LIMITATIONS
 - Audit Log entry count grows as transfers are added (entries computed from auditLog.length)
 - TRANSACTION_TOTAL hardcoded at 847 (simulates large dataset)
 - Bundle ~713KB unminified — in prod: code-split with React.lazy()
-- Onboarding: DemoStatusSwitcher + "Preview welcome email" CTA are demo-only (wouldn't ship)
+- Onboarding: DemoStatusSwitcher + "Preview welcome/sign-in email" CTAs are demo-only (wouldn't ship)
 - No real verdict — VerifyIdentity always lands on 'pending' (no Sumsub webhook backend)
 - Login is routing-only: the magic link is simulated by "Continue to dashboard" (no real
   mail/auth/token verification); whatever status is in localStorage drives the dashboard
@@ -716,7 +731,8 @@ WHAT TO TACKLE NEXT
 ═══════════════════════════════════════════════════════════
 
 Onboarding roadmap (from team update, Jun 2026 — see project memory):
-- Updated welcome email design
+- Welcome + sign-in email designs DONE (Linear-referenced previews via
+  EmailPreviewShell). Production gap remains: real templated HTML + actual sending.
 - For team (raised with the pending rework): confirm review-SLA copy (we shipped
   "3–5 business days"); decide whether pending sandbox keys become functional vs.
   display-only; confirm the reachable trio (Docs / API key / Team).
