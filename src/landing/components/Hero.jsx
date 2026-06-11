@@ -25,7 +25,7 @@ const MORE_COUNTRIES = [
 const TOOLTIP_STYLE = {
   position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
   marginBottom: 6, background: '#0a0a09', color: '#fff',
-  fontSize: 11, fontWeight: 500, fontFamily: 'Inter',
+  fontSize: 11, fontWeight: 500, fontFamily: '"Inter Variable", Inter, sans-serif',
   padding: '3px 7px', borderRadius: 5, whiteSpace: 'nowrap',
   pointerEvents: 'none', zIndex: 100, letterSpacing: '-0.01em',
 }
@@ -83,7 +83,7 @@ function MoreChip({ style }) {
         width: 24, height: 24, borderRadius: '50%',
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         background: '#0a0a09', color: '#fff', border: '1.5px solid #fff',
-        fontSize: 8, fontWeight: 700, fontFamily: 'Inter', letterSpacing: '-0.01em',
+        fontSize: 8, fontWeight: 700, fontFamily: '"Inter Variable", Inter, sans-serif', letterSpacing: '-0.01em',
       }}>
         +9
       </span>
@@ -93,7 +93,7 @@ function MoreChip({ style }) {
           left: tooltipPos.x, top: tooltipPos.y,
           transform: 'translate(-50%, -100%)',
           background: '#0a0a09', color: '#fff',
-          fontSize: 11, fontWeight: 500, fontFamily: 'Inter', letterSpacing: '-0.01em',
+          fontSize: 11, fontWeight: 500, fontFamily: '"Inter Variable", Inter, sans-serif', letterSpacing: '-0.01em',
           padding: '6px 10px', borderRadius: 5, whiteSpace: 'nowrap',
           pointerEvents: 'none', zIndex: 1000,
           display: 'flex', flexDirection: 'column', gap: 3, textAlign: 'left',

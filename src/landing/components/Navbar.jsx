@@ -27,6 +27,7 @@ function GlobalStackLogo() {
 export default function Navbar({ scrollYProgress }) {
   const shouldReduceMotion = useReducedMotion()
   const [hidden, setHidden] = useState(false)
+  const [signInHovered, setSignInHovered] = useState(false)
   const lastY = useRef(0)
 
   // Match page background keyframes exactly
@@ -102,19 +103,27 @@ export default function Navbar({ scrollYProgress }) {
         <div className="flex items-center gap-2">
           {/* Sign in — outline/secondary. Transparent fill, text in btnBg, and a
               lighter (0.35) btnBorder so the outline reads softer than the text —
-              the lower-emphasis action next to the solid Sign up primary. */}
+              the lower-emphasis action next to the solid Sign up primary.
+              On hover it fills in (bg → btnBg, text → btnColor), so it momentarily
+              mirrors the solid Sign up button. This is the same fill-on-hover invert
+              the Hero "Sign in" + DeveloperSection "Read the docs" outline buttons use,
+              expressed through the scroll-driven MotionValues instead of static Tailwind
+              hover classes (the nav palette animates with scroll, so a fixed hover:bg-
+              color would be wrong on the blue/dark sections). */}
           <motion.a
             href="/login"
+            onHoverStart={() => setSignInHovered(true)}
+            onHoverEnd={() => setSignInHovered(false)}
             style={{
-              backgroundColor: 'transparent',
-              color: btnBg,
+              backgroundColor: signInHovered ? btnBg : 'transparent',
+              color: signInHovered ? btnColor : btnBg,
               borderWidth: 1,
               borderStyle: 'solid',
               borderColor: btnBorder,
-              padding: '10px 20px',
-              borderRadius: 12,
-              fontFamily: 'Inter, sans-serif',
-              fontSize: 14,
+              padding: '8px 16px',
+              borderRadius: 10,
+              fontFamily: '"Inter Variable", Inter, sans-serif',
+              fontSize: 13,
               fontWeight: 500,
               lineHeight: 1,
               letterSpacing: '-0.01em',
@@ -123,9 +132,8 @@ export default function Navbar({ scrollYProgress }) {
               textDecoration: 'none',
               cursor: 'pointer',
               whiteSpace: 'nowrap',
+              transition: 'background-color 0.15s ease, color 0.15s ease',
             }}
-            whileHover={{ opacity: 0.82 }}
-            transition={{ duration: 0.12 }}
           >
             Sign in
           </motion.a>
@@ -136,10 +144,10 @@ export default function Navbar({ scrollYProgress }) {
               backgroundColor: btnBg,
               color: btnColor,
               border: '1px solid transparent',
-              padding: '10px 20px',
-              borderRadius: 12,
-              fontFamily: 'Inter, sans-serif',
-              fontSize: 14,
+              padding: '8px 16px',
+              borderRadius: 10,
+              fontFamily: '"Inter Variable", Inter, sans-serif',
+              fontSize: 13,
               fontWeight: 500,
               lineHeight: 1,
               letterSpacing: '-0.01em',

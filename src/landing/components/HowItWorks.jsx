@@ -183,7 +183,7 @@ export default function HowItWorks({
                     </span>
                     <span
                       style={{
-                        fontFamily: 'Inter, sans-serif',
+                        fontFamily: '"Inter Variable", Inter, sans-serif',
                         fontWeight: 600,
                         fontSize: 16,
                         color: isActive ? '#0E141B' : isOnBlue ? '#ffffff' : '#0E141B',

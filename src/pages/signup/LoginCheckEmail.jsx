@@ -55,7 +55,7 @@ export default function LoginCheckEmail() {
       </div>
 
       {/* Resend — UI-only stub in this prototype (no real mail sends). */}
-      <p className="text-xs text-content-tertiary text-center mt-5">
+      <p className="text-sm text-content-secondary text-center mt-5">
         Didn&apos;t get the email?{' '}
         <Button
           variant="text"

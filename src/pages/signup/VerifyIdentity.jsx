@@ -54,7 +54,7 @@ export default function VerifyIdentity() {
       {/* Fallback for when the iframe is blocked from framing. Centered to sit
           with the cardless, centered layout. The link is a Pax text button
           (asChild → real <a>) to match the other inline text CTAs in onboarding. */}
-      <p className="text-xs text-content-tertiary mt-3 flex items-center justify-center gap-1.5">
+      <p className="text-sm text-content-secondary mt-3 flex items-center justify-center gap-1.5">
         Having trouble loading the verification?
         <Button asChild variant="text" color="primary" size="xs" className="px-0 align-baseline cursor-pointer">
           <a href={SUMSUB_SANDBOX_URL} target="_blank" rel="noopener noreferrer">

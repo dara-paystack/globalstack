@@ -275,15 +275,18 @@ export function Sidebar() {
               className={`shrink-0 text-content-tertiary ${showOnMobileAndDesktop()}`}
             />
           </DropdownMenuTrigger>
-          {/* Width tracks the trigger (= the full sidebar width) via Radix's
-              --radix-dropdown-menu-trigger-width var, so the menu never spills
-              past the sidebar edge. min-w floors it at 180px so "Log out" stays
-              readable on the 56px collapsed tablet rail, where a pure width match
-              would be unusably narrow. */}
+          {/* Compact, content-width menu (floored at 180px) that floats above the
+              identity row like a normal dropdown — centered on the trigger rather than
+              pinned to the sidebar's edge. A single "Log out" item stretched across the
+              full sidebar read as an oversized, half-empty bar glued to the row. Radix
+              collision handling keeps it on-screen when it flies out from the narrow
+              56px collapsed tablet rail; sideOffset lifts it off the identity row so it
+              reads as floating rather than attached. */}
           <DropdownMenuContent
             side="top"
-            align="start"
-            className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[180px]"
+            align="center"
+            sideOffset={8}
+            className="min-w-[180px]"
           >
             <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
               <LogOut width={15} height={15} strokeWidth={1.75} />
