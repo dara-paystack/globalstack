@@ -43,7 +43,7 @@ function ActionCard({ icon: Icon, title, description, to, href, external, traili
           aria-hidden="true"
         />
       </div>
-      <span className="block text-sm font-medium text-content-primary mt-3">{title}</span>
+      <span className="block text-sm font-medium text-content-secondary mt-3">{title}</span>
       <span className="block text-xs text-content-tertiary mt-1 leading-snug">{description}</span>
     </>
   )
@@ -112,7 +112,7 @@ export default function PendingHome() {
           <h2 className="text-lg font-semibold text-content-primary leading-snug">
             Your account is under review
           </h2>
-          <p className="mt-2 text-sm text-content-secondary max-w-xl leading-relaxed">
+          <p className="mt-1 text-sm text-content-secondary max-w-xl leading-relaxed">
             We&apos;re verifying{' '}
             {company ? (
               <span className="font-medium text-content-secondary">{company}</span>
@@ -122,9 +122,9 @@ export default function PendingHome() {
             . Most reviews take{' '}
             <span className="font-medium text-content-secondary">3–5 business days</span>
             {email ? (
-              <> — we&apos;ll email you at <span className="font-medium text-content-secondary">{email}</span> as soon as you&apos;re approved.</>
+              <> — we&apos;ll email<br className="hidden md:block" /> you at <span className="font-medium text-content-secondary">{email}</span> as soon as you&apos;re approved.</>
             ) : (
-              <> — we&apos;ll email you as soon as you&apos;re approved.</>
+              <> — we&apos;ll email<br className="hidden md:block" /> you as soon as you&apos;re approved.</>
             )}
           </p>
         </div>
