@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { FileSearch, BookOpen, KeyRound, UsersRound, ArrowRight, ArrowUpRight } from 'lucide-react'
+import { BookOpen, KeyRound, UsersRound, ArrowRight, ArrowUpRight } from 'lucide-react'
 import { usePageTitle } from '../../lib/usePageTitle'
 import { useAccount } from '../../context/AccountContext'
 import { DOCS_URL } from '../../lib/pendingAccess'
@@ -87,11 +87,27 @@ export default function PendingHome() {
       </h1>
 
       {/* ── Status hero ─────────────────────────────────────────────────────────
-          Light-blue (information) card. Flat status (no progress stepper): we don't
-          get granular state back from Sumsub, so a stepper would be fiction — one
-          clear message. Horizontal layout: text leads, a line illustration sits to
-          the right on desktop. Heading is an h2 — the greeting above is the page h1. */}
-      <div className="rounded-xl border border-feedback-information-border bg-feedback-information-light p-6 md:p-8 flex flex-col md:flex-row md:items-center gap-6">
+          Flat status (no progress stepper): we don't get granular state back from
+          Sumsub, so a stepper would be fiction — one clear message. Horizontal
+          layout with room for a line illustration to the right on desktop
+          (currently off — see below). Heading is an h2 — the greeting above is the
+          page h1.
+
+          SURFACE TREATMENT (inline so it stays a self-contained one-off until we
+          decide whether to harvest it into a token/utility): instead of the old
+          flat `bg-feedback-information-light` tint, a whisper-pale brand gradient
+          field (stack → deep-sky → forest-green, all at ~100-level lightness so the
+          page reads calm-premium, not candy). No border and no drop shadow — the
+          gradient defines the card on its own. The right-side illustration is off
+          for now (placeholder removed); the colour is concentrated nowhere yet —
+          that lands when a real illustration is added back to the right.
+          Radius/padding are unchanged. */}
+      <div
+        className="rounded-xl px-6 py-6 md:px-8 flex flex-col md:flex-row md:items-center gap-6"
+        style={{
+          background: 'linear-gradient(135deg, #F1F6FE 0%, #EEF7FF 48%, #EDF9F1 100%)',
+        }}
+      >
         <div className="flex-1 min-w-0">
           <h2 className="text-lg font-semibold text-content-primary leading-snug">
             Your account is under review
@@ -111,12 +127,6 @@ export default function PendingHome() {
               <> — we&apos;ll email you as soon as you&apos;re approved.</>
             )}
           </p>
-        </div>
-        {/* Line illustration — a large thin-stroke lucide icon as a stand-in
-            (project rule: lucide only, no inline SVG). Decorative, desktop-only.
-            Swap for a bespoke illustration asset when one exists. */}
-        <div className="hidden md:flex shrink-0 items-center justify-center text-feedback-information-main">
-          <FileSearch width={88} height={88} strokeWidth={1} aria-hidden="true" />
         </div>
       </div>
 
